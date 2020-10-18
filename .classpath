@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.8.0_141"/>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry exported="true" kind="lib" path="E:/Programmi/WEKA/Weka-3-8-4/smote-1.0.3.jar/smote-1.0.3.jar"/>
+	<classpathentry exported="true" kind="lib" path="E:/Programmi/WEKA/Weka-3-8-4/weka.jar"/>
+	<classpathentry exported="true" kind="lib" path="E:/Programmi/Java/jdk1.8.0_141/lib/java-json.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
