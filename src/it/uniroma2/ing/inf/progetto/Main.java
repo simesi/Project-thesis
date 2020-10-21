@@ -55,32 +55,22 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName ="MAHOUT"; //per il Deliverable 1
-	private static String projectNameGit ="apache/mahout.git"; //per il Deliverable 1
-	private static final String CLONED_PROJECT_DELIVERABLE1 = new File("").getAbsolutePath()+"\\"+projectName;	// This give me the localPath of the application where it is installed
-	private static final String CSV_PATH_DELIVERABLE1 = Paths.get(new File("").getAbsolutePath())+"\\Deliverable 1.csv";
+	private static String projectName="BOOKKEEPER";//"OPENJPA";
+	private static String projectNameGit="apache/bookkeeper.git";//"apache/openjpa.git";
 
-	private static final int YEARS_INTERVAL=14; //range degli anni passati su cui cercare (per deliverable 1)
-	private static final boolean COLLECT_DATA_AS_YEARS = false;  //impostare come true per impostare come unità di misura del control chart un anno
 
-	private static ArrayList<String> yearsList;
-	private static boolean startToExecDeliverable2=false;
-
-	//--------------------------
-	//per deliverable 2
 
 	public static Map<LocalDateTime, String> releaseNames;
 	public static Map<LocalDateTime, String> releaseID;
 	public static List<LocalDateTime> releases;
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
 	private static Map<String,LocalDateTime> fromFileNameToDateOfCreation=new HashMap<>();
-	private static List<String> fileNameOfFirstHalf;
+	private static List<String> filepathsOfTheCurrentRelease;
 	private static List<LineOfDataset> arrayOfEntryOfDataset;
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 
-	private static boolean searchingForDateOfCreation = false;
-	private static boolean discard=true;
+	private static boolean discard=false;
 	private static boolean calculatingLOC=false;
 	private static boolean calculatingLocTouched=false;
 	private static boolean calculatingNAuth=false;
@@ -100,6 +90,7 @@ public class Main {
 	private static final String TOTAL= "total"; 
 	private static final String FORMAT_DATE= "yyyy-MM-dd";
 	private static final String RELEASE_DATE="releaseDate";
+	private static final int YEARS_INTERVAL=14;
 	//--------------------------
 
 
@@ -132,27 +123,13 @@ public class Main {
 		Path directory;
 		String originUrl = "https://github.com/"+projectNameGit;
 
-		if (!startToExecDeliverable2) {
-			//percorso dove salvare la directory in locale
-			directory = Paths.get(CLONED_PROJECT_DELIVERABLE1);
-		}
-		else {
-			directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-		}
+
+		directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+
 		runCommand(directory.getParent(), "git", "clone", originUrl, directory.getFileName().toString());
 
 	}
 
-	//questo metodo fa il comando'git log' del bug sulla repository (mostra il log dei commit)   
-	private static void gitLogOfBug(String id) throws IOException, InterruptedException{
-		discard=false;
-		Path directory = Paths.get(CLONED_PROJECT_DELIVERABLE1);
-		//ritorna la data dell'ultimo commit con quel bug nel commento
-		runCommand(directory, "git", "log", "--grep="+id+":", "-1",
-				"--date=short", "--pretty=format:\"%cd\"");
-		discard=true;
-
-	}
 
 	public static void runCommand(Path directory, String... command) throws IOException, InterruptedException {
 
@@ -170,34 +147,34 @@ public class Main {
 
 				.directory(directory.toFile());
 
-		   runProcAndWait(pb);
+		runProcAndWait(pb);
 
 	}
 
 	private static void runProcAndWait(ProcessBuilder pb) throws IOException, InterruptedException {
 		//lancio un nuovo processo che invocherà il comando 'command',
-				//nella working directory fornita. 
-				Process p = pb.start();
+		//nella working directory fornita. 
+		Process p = pb.start();
 
-				StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream());
+		StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream());
 
-				StreamGobbler outputGobbler = new StreamGobbler(p.getInputStream());
+		StreamGobbler outputGobbler = new StreamGobbler(p.getInputStream());
 
-				outputGobbler.start();
+		outputGobbler.start();
 
-				errorGobbler.start();
+		errorGobbler.start();
 
-				int exit = p.waitFor();
+		int exit = p.waitFor();
 
-				errorGobbler.join();
+		errorGobbler.join();
 
-				outputGobbler.join();
+		outputGobbler.join();
 
-				if (exit != 0) {
+		if (exit != 0) {
 
-					throw new AssertionError(String.format("runCommand returned %d", exit));
+			throw new AssertionError(String.format("runCommand returned %d", exit));
 
-				}
+		}
 	}
 
 	public static void runCommandOnShell(Path directory, String command) throws IOException, InterruptedException {
@@ -232,11 +209,9 @@ public class Main {
 
 
 				while ((line = br.readLine()) != null) {
-					if(!startToExecDeliverable2&&!discard) {
-						collectDataDeliverable1(line);
-					}
-					else if (searchingForDateOfCreation) {
-						gettingDateOfCreation(line,br);
+
+					if (discard) {
+						System.out.print("linea del checkout: "+line);
 					}
 
 					else if (calculatingLOC) {
@@ -270,27 +245,6 @@ public class Main {
 
 		}
 
-		private void gettingDateOfCreation(String line, BufferedReader br) throws IOException {
-
-			//levo l'ultimo carattere introdotto (per errore) nel replace a monte
-			String file = line.substring(0, line.length()-1);
-
-			LocalDateTime dateTime; 
-			String secondLine =br.readLine();
-			secondLine=secondLine.trim();
-			if (secondLine != null) {
-				LocalDate date = LocalDate.parse(secondLine);
-				dateTime = date.atStartOfDay();
-
-				fromFileNameToDateOfCreation.put(file,dateTime);
-				
-				//le date ulteriori vengono ignorate
-				while((br.readLine())!=null) {
-					//si ignorano le date ulteriori
-				}
-			}
-
-		}
 
 		private void gettingLastCommit(String line, BufferedReader br) throws IOException {
 
@@ -482,9 +436,9 @@ public class Main {
 			l.setNR(numberOfCommit);
 			l.setChurn(addedLines-deletedLines -sumOfRealDeletedLOC);
 			l.setMaxChurn(maxChurn);
-			
-				l.setAVGChurn(Math.floorDiv(addedLines-deletedLines -sumOfRealDeletedLOC,numberOfCommit));
-			
+
+			l.setAVGChurn(Math.floorDiv(addedLines-deletedLines -sumOfRealDeletedLOC,numberOfCommit));
+
 			arrayOfEntryOfDataset.add(l);
 
 		}
@@ -567,21 +521,12 @@ public class Main {
 			}
 		}
 
-		private void collectDataDeliverable1(String line) {
-			if(COLLECT_DATA_AS_YEARS) {
-				//get only year
-				yearsList.add(line.substring(0, 4));
-			} else {
-				//get month and year
-				yearsList.add(line.substring(0, 7));
-			}
 
-		}
 	}
 
 	/*
 	  Java isn't able to delete folders with data in it. We have to delete
-	     all files before deleting the CLONED_PROJECT_DELIVERABLE1.This utility class is used to delete 
+	     all files before deleting the directory.This utility class is used to delete 
 	  folders recursively in java.*/
 
 	public static void recursiveDelete(File file) {
@@ -607,39 +552,6 @@ public class Main {
 		}
 	}
 
-	//questo metodo scrive un file CSV con i dati richiesti per poter creare il control chart
-	private static void writeCSV(Map<String,Integer> map) {
-		String[] header;
-		if(COLLECT_DATA_AS_YEARS) {
-			header = new String[] { "years", "bugs fixed"};
-		} else {
-			header = new String[] { "years-month", "bugs fixed"};
-		}
-
-		try (FileWriter writer = new FileWriter(CSV_PATH_DELIVERABLE1, false)){
-			//True = Append to file, false = Overwrite
-
-			writer.write(header[0]);
-			writer.write(",");
-			writer.write(header[1]); 
-			writer.write("\r\n");
-
-			// Get each keys and values and write on file
-			for (Map.Entry<String, Integer> entry : map.entrySet()) {
-				String y = entry.getKey();
-				Integer i = entry.getValue();
-
-				writer.write(y);
-				writer.write(",");
-				writer.write(String.valueOf(i));
-				writer.write("\r\n");
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}  
-
-	}
 
 	//------------------------------------------
 	//Metodi per Deliverable 2 Milestone 1
@@ -653,38 +565,10 @@ public class Main {
 		releaseID.put(dateTime, id);
 	}
 
-	//passando una pathname se ne ricostruisce la data di creazione
-	public static void getCreationDate(String filename) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-
-		//chiamata per ottenere la data di creazione del file e inserirla in una hashMap
-		try {
-			String command = ECHO+filename+" && git log --diff-filter=A --format=%as --reverse -- "
-					+filename;
-			runCommandOnShell(directory, command);
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-
-		int num= Math.floorDiv(fromReleaseIndexToDate.size(),2);
-		//aggiunta dei soli file creati prima della metà delle release
-		if (fromFileNameToDateOfCreation.get(filename).isBefore(fromReleaseIndexToDate.get(String.valueOf(num)))||
-				fromFileNameToDateOfCreation.get(filename).isEqual(fromReleaseIndexToDate.get(String.valueOf(num)))) {
-			fileNameOfFirstHalf.add(filename);
 
 
-		}
 
-	}
-
-
-	//Search and list of all file java in the repository (at this time)
+	//Search and list of all file java in the repository at the given release
 	public static void searchFileJava( final File folder, List<String> result) {
 		String fileRenamed;
 		for (final File f : folder.listFiles()) {
@@ -697,11 +581,9 @@ public class Main {
 			if (f.isFile()&&f.getName().matches(".*\\.java")) {
 
 
-
-				fileRenamed=f.getAbsolutePath();
 				//discard of the local prefix to the file name (that depends to this program)
 
-				fileRenamed=fileRenamed.replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
+				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
 
 				//ci si costruisce una HashMap con la data di creazione dei file java
 
@@ -846,151 +728,29 @@ public class Main {
 
 	//--------------------------------------
 
-	public static void main(String[] args) throws IOException, JSONException {
 
-		Integer i = 0;
-		String outname;
-
-		doDeliverable1();
-
-		//		//-------------------------------------------------------------------------------------------------
-		//	//INIZIO MILESTONE 1 DELIVERABLE 2 
-
-		findReleaseAndFilesJava();
-
-		//----------------------------------------------
-
-		calculateSomeMetrics();
-
-		startToCalculateBugginess();
-
-		startToGetFixedVersWithAV();
-		setBuggy();
-
-		startToGetCreatedVersWithoutAV();
-		checkFixedVersWithoutAV();
-		setBuggyWithoutAV();		 
-
-		writeResult();
-
-
-		//cancellazione directory clonata locale del progetto   
-		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-
-
-
-		//----------------------------------------------------------------------------
-
-		////MILESTONE 2 DELIVERABLE 2
-
-		//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
-
-		projectName= "OPENJPA";
-
-		outname = projectName + " Deliverable 2 Milestone 1.csv";
-		String csvTrain;
-		String csvTest;
-		String row = "";
-
-		File csvFile = new File(outname);
-		if (!csvFile.isFile()) {
-			System.exit(-1);
-		}
-
-		
-
-		//se Deliverable 2 Milestone 1 non è stato eseguito allora scrivi a mano la release.size
-
-		for(i=2;i<=(Math.floorDiv(releases.size(),2));i++) {//modifica questa linea se Milestone 1 non è stata eseguita
-
-
-			csvTrain = projectName+" Training for "+"Release "+i+".csv";
-			csvTest = projectName+" Testing for "+"Release "+i+".csv";
-
-
-			try (FileWriter fileWriterTrain= new FileWriter(csvTrain);
-					FileWriter fileWriterTest=new FileWriter(csvTest);
-					BufferedReader csvReader = new BufferedReader(new FileReader(outname));
-					){
-
-
-				fileWriterTrain.append("Version,Size(LOC),LOC_Touched,NR,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,Churn,MAX_Churn,AVG_Churn,Buggy");
-				fileWriterTrain.append("\n");
-
-				fileWriterTest.append("Version,Size(LOC),LOC_Touched,NR,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,Churn,MAX_Churn,AVG_Churn,Buggy");
-				fileWriterTest.append("\n");
-
-				
-				//si leva l'header
-				row=csvReader.readLine();
-				while ((row = csvReader.readLine()) != null) {
-
-					String[] entry = row.split(",");
-
-					//per creare il dataset di training
-					if ((Integer.parseInt(entry[0]))<i) {
-
-						 writePieceOfCsv(fileWriterTrain,entry);
-					} 
-					else if (Integer.parseInt(entry[0])==i) {
-						 writePieceOfCsv(fileWriterTest,entry);
-					}
-
-					else {
-
-						break;
-					}
-				}//fine while
-
-			} catch (Exception e) {
-				e.printStackTrace();
-			} 
-		}
-
-
-
-		Weka w = new Weka();
-
-		i=Math.floorDiv(releases.size(),2);
-		//i=Math.floorDiv(14,2);//commenta questa linea di codice e lascia quella sopra!
-
-		//a doClassification() gli si passa il max numero di versioni da classificare
-		w.doClassificationMilestone2(i, projectName);
-
-
-		//--------------------------------------------------------------------------------
-		//inizio ultima milestone Deliverable 2 
-
-		try {
-			w.doClassificationMilestone3(i, projectName);
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-	}
 
 
 
 
 	private static void writePieceOfCsv(FileWriter fileWriter,String[] entry) throws IOException {
-		
+
 		for(int n=0;n<=12;n++) {
-		
-		if(n==1) {
-			continue;
+
+			if(n==1) {
+				continue;
+			}
+
+			fileWriter.append(entry[n]);
+			if(n==12) {
+				fileWriter.append("\n");
+				return;
+			}
+
+			fileWriter.append(",");
+
 		}
-		
-		fileWriter.append(entry[n]);
-		if(n==12) {
-			fileWriter.append("\n");
-			return;
-		}
-		
-		fileWriter.append(",");
-		
-		}
-		
+
 	}
 
 	private static void writeResult() {
@@ -1129,7 +889,7 @@ public class Main {
 
 		//inizio operazioni per calcolo bugginess
 		ticketsWithoutAV=new ArrayList<>();
-		
+
 		//Get JSON API for ticket with Type == “Bug” AND (status == “Closed” OR status == “Resolved”) AND Resolution == “Fixed” AND affected version = null in the project
 		do {
 			//Only gets a max of 1000 at a time, so must do this multiple times if bugs >1000
@@ -1182,7 +942,7 @@ public class Main {
 	}
 
 	private static String finalizeGetCreatedVersionWithoutAv(LocalDate date) {
-		
+
 		for(int a=1;a<=fromReleaseIndexToDate.size();a++) {
 
 			//abbiamo raggiunto nel for l'ultima release
@@ -1235,22 +995,22 @@ public class Main {
 
 	private static void checkTicket() {
 		//rimuovo ticket senza file java o AV,IV e OV inconsistenti
-				ArrayList<TicketTakenFromJIRA> ticketsToDelete = new ArrayList<>();	
+		ArrayList<TicketTakenFromJIRA> ticketsToDelete = new ArrayList<>();	
 
-				for (TicketTakenFromJIRA ticket : tickets) {
-					if((ticket.getAffectedVersion()==null)||(ticket.getCreatedVersion()==null)
-							||(ticket.getFixedVersion()==null)||ticket.getFilenames().size()==0){
+		for (TicketTakenFromJIRA ticket : tickets) {
+			if((ticket.getAffectedVersion()==null)||(ticket.getCreatedVersion()==null)
+					||(ticket.getFixedVersion()==null)||ticket.getFilenames().size()==0){
 
-						ticketsToDelete.add(ticket);
-					}
-				}
+				ticketsToDelete.add(ticket);
+			}
+		}
 
-				//si eliminano i ticket selezionati prima
-				for (TicketTakenFromJIRA ticket : ticketsToDelete) {
-					tickets.remove(ticket);
-				}
-				ticketsToDelete.clear();
-		
+		//si eliminano i ticket selezionati prima
+		for (TicketTakenFromJIRA ticket : ticketsToDelete) {
+			tickets.remove(ticket);
+		}
+		ticketsToDelete.clear();
+
 	}
 
 	private static void startToGetFixedVersWithAV() throws IOException {
@@ -1301,7 +1061,7 @@ public class Main {
 
 			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
 
-			
+
 			LocalDate date;
 			LocalDate affReleaseDate;
 			String affVersReleaseDate="";
@@ -1329,9 +1089,9 @@ public class Main {
 
 				date = LocalDate.parse(createdDate,format);
 				affReleaseDate =LocalDate.parse(affVersReleaseDate,format);
-				
-           checkAndGetCreatedVersion(date,affReleaseDate,key);
-           
+
+				checkAndGetCreatedVersion(date,affReleaseDate,key);
+
 			}  
 		} while (i < total);
 
@@ -1341,7 +1101,7 @@ public class Main {
 		String createdVers=null;
 		String affVers=null;
 		TicketTakenFromJIRA tick;
-		
+
 		//se è la prima versione
 		if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
 			createdVers= String.valueOf(1);
@@ -1353,13 +1113,13 @@ public class Main {
 				//abbiamo raggiunto nel for l'ultima release
 				if(a==fromReleaseIndexToDate.size()) {
 					createdVers= String.valueOf(a);
-                    affVers=getAffVers(affReleaseDate);
-                    
-                  //check su opening version e affected version
-            		if (Integer.parseInt(createdVers)>=Integer.parseInt(affVers)) {
-            			tick= new TicketTakenFromJIRA(key, createdVers, affVers);
-            			tickets.add(tick);
-            		}
+					affVers=getAffVers(affReleaseDate);
+
+					//check su opening version e affected version
+					if (Integer.parseInt(createdVers)>=Integer.parseInt(affVers)) {
+						tick= new TicketTakenFromJIRA(key, createdVers, affVers);
+						tickets.add(tick);
+					}
 					return;
 
 				}
@@ -1381,14 +1141,14 @@ public class Main {
 		}
 	}
 
-	
-	
-	
+
+
+
 	private static String getAffVers(LocalDate affReleaseDate) {
 		for(int k=0;k<releases.size();k++) {
 			if(releases.get(k).isEqual(affReleaseDate.atStartOfDay())) {
 				return String.valueOf(k+1);
-				
+
 			}
 		}
 		return String.valueOf(releases.size());
@@ -1401,8 +1161,8 @@ public class Main {
 		//per ogni indice di versione nella primà metà delle release
 		for(i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
 
-			//per ogni file
-			for (String s : fileNameOfFirstHalf) {
+			//per ogni file nella release 'rel'
+			for (String s : filepathsOfTheCurrentRelease) {
 				calculatingLOC = true;
 				//il metodo getChurnMetrics creerà l'arrayList di entry LineOfDataSet
 				getChurnMetrics(s,i);
@@ -1421,13 +1181,12 @@ public class Main {
 
 	}
 
-	private static void findReleaseAndFilesJava() throws JSONException, IOException {
+	private static void findNumberOfReleases() throws JSONException, IOException {
 
+
+		// qui si calcolano le release
 		Integer i = 0;
 		JSONObject json ;
-		projectName ="OPENJPA";
-		projectNameGit ="apache/openjpa.git";//"apache/bookkeeper.git"
-		startToExecDeliverable2=true;
 
 		//Fills the arraylist with releases dates and orders them
 		//Ignores releases with missing dates
@@ -1450,8 +1209,8 @@ public class Main {
 						name,id);
 			}
 		}
-		
-		
+
+
 		Comparator <LocalDateTime> comp = (o1,o2)->o1.compareTo(o2);
 		// order releases by date
 		Collections.sort(releases, comp);
@@ -1460,155 +1219,186 @@ public class Main {
 
 
 		//--------------------------------------------------------
-		///ORA CREO IL  DATASET
-
-
-		//cancellazione preventiva della directory clonata del progetto (se esiste)   
-		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-		try {
-			discard=true;
-			gitClone();	
-			discard=false;
-		}
-		catch (InterruptedException | IOException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-			System.exit(-1);
-		}
-
-
-		File folder = new File(projectName);
-		List<String> files = new ArrayList<>();
-		fileNameOfFirstHalf = new ArrayList<>();
-
-		//search for java files in the cloned repository
-		searchFileJava(folder, files);
-
 
 		//popolo un'HasMap con associazione indice di release-data delle release
 		for ( i = 1; i <= releases.size(); i++) {
 			fromReleaseIndexToDate.put(i.toString(),releases.get(i-1));
 		}
 
-		searchingForDateOfCreation = true;
 
+		//cancellazione preventiva della directory clonata del progetto (se esiste)   
+		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 
-
-		//per ogni file
-		for (String s : files) {
-			getCreationDate(s);
-		}
-
-
-		files.clear();
-
-
-		searchingForDateOfCreation = false;
 
 	}
 
-	private static void doDeliverable1() throws IOException, JSONException {
-		List<String> ticketIDList;
-		Integer j = 0;
-		Integer i = 0;
-		Integer total = 1;
-		JSONObject json ;
-		JSONArray issues;
+	//questo metodo fa il checkout della repository per ottenerne lo stato visibile alla versione passatagli
+	private static void gitCheckoutAtGivenVersion(int version){
 
-
-		//Get JSON API for closed bugs w/ AV in the project
-		do {
-			//Only gets a max of 1000 at a time, so must do this multiple times if bugs >1000
-			j = i + 1000;
-
-			/*Si ricavano tutti i ticket di tipo bug nello stato di risolto o chiuso e con risoluzione "fixed".*/
-			String url = URLJIRA+ projectName + PIECE_OF_URL_JIRA+ "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22AND%20updated%20%20%3E%20endOfYear(-"+YEARS_INTERVAL+")"
-					+ "&fields=key,resolutiondate,created&startAt="
-					+ i.toString() + MAX_RESULT + j.toString();
-
-
-			json = readJsonFromUrl(url);
-			issues = json.getJSONArray(ISSUES);
-			//ci si prende il numero totale di ticket recuperati
-			total = json.getInt(TOTAL);
-
-			ticketIDList= new ArrayList<>();
-			yearsList= new ArrayList<>();
-			// si itera sul numero di ticket
-			for (; i < total && i < j; i++) {
-
-				String key = issues.getJSONObject(i%1000).get("key").toString();
-
-
-				ticketIDList.add(key);
-
-			}  
-		} while (i < total);
-
-
-		String myID;
-
-		// INIZIO DELIVERABLE 1
-		//cancellazione preventiva della directory clonata del progetto (se già esistente)   
-		recursiveDelete(new File(CLONED_PROJECT_DELIVERABLE1));
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 		try {
-			gitClone();	
 
-			for ( i = 0; i < ticketIDList.size(); i++) {
-				myID=ticketIDList.get(i);
-				gitLogOfBug(myID);
-			}
-		} catch (InterruptedException e) {
+			String command = "git checkout `git rev-list -n 1 --first-parent "
+					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master'";	
+			discard =true;
+			runCommandOnShell(directory, command);
+			discard=false;
+
+
+		}
+		catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 			Thread.currentThread().interrupt();
 			System.exit(-1);
+		}		
+	}
+
+
+
+
+
+	public static void main(String[] args) throws IOException, JSONException {
+
+		Integer i = 0;
+		String outname;
+
+
+		findNumberOfReleases();
+
+
+		try {
+			//si fa il clone della versione odierna del progetto
+			gitClone();	
 		}
-		finally {
-			//cancellazione directory clonata locale del progetto   
-			recursiveDelete(new File(CLONED_PROJECT_DELIVERABLE1));
+		catch (InterruptedException | IOException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+			System.exit(-1);
+		}		
+
+
+		//per ogni versione nella primà metà delle release
+		for(i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+
+
+			gitCheckoutAtGivenVersion(i);
+
+
+			File folder = new File(projectName);
+			List<String> files = new ArrayList<>();
+			filepathsOfTheCurrentRelease = new ArrayList<>();
+
+			//search for java files in the cloned repository
+			searchFileJava(folder, files);
+
+
+			calculateSomeMetrics();
+
+			startToCalculateBugginess();
+
+			startToGetFixedVersWithAV();
+			setBuggy();
+
+			startToGetCreatedVersWithoutAV();
+			checkFixedVersWithoutAV();
+			setBuggyWithoutAV();		 
+
+			writeResult();
+
 		}
-		Map<String, Integer> map = new HashMap<>();
-
-
-		//popolamento map avente come chiave l'anno (e il mese se impostato COLLECT_DATA_AS_YEARS= false) e come value il numero di bug risolti
-		for(i=0;i<yearsList.size();i++) {
-			map.put(yearsList.get(i), (map.getOrDefault(yearsList.get(i), 0)+1));
-		}
-
-		//aggiunta dei mesi con valori nulli
-		if(!COLLECT_DATA_AS_YEARS) {
-			// TreeMap to store values of HashMap 
-			TreeMap<String, Integer> sorted = new TreeMap<>(); 
-			// Copy all data from hashMap into TreeMap 
-			sorted.putAll(map); 
-
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern(FORMAT_DATE);
-			DateTimeFormatter formatterWithNoDay = DateTimeFormatter.ofPattern("yyyy-MM");
-
-			//si prende il primo e l'ultimo anno-mese ....
-			LocalDate firstdate = LocalDate.parse(sorted.firstKey()+"-01",formatter);
-			LocalDate lastdate = LocalDate.parse(sorted.lastKey()+"-01",formatter);
-			//iteratore
-			LocalDate date = firstdate;
-
-			// .... e si aggiungono i mesi tra i due periodi 			
-			while(date.isBefore(lastdate)) {
-				date =date.with(TemporalAdjusters.firstDayOfNextMonth());
-				sorted.put(date.format(formatterWithNoDay), 0);
-			}
-
-			//con l'istruzione seguente i valori dele chiavi duplicate in 'sorted' verranno riscritte con i valori di 'map'.
-			sorted.putAll(map);
-			map=sorted;
-		}
-
-
-		writeCSV(map);
-
-
 		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 
-	}
+		//}
 
+		//----------------------------------------------------------------------------
+
+		////MILESTONE 2 DELIVERABLE 2
+
+		//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
+
+		projectName= "OPENJPA";
+
+		outname = projectName + " Deliverable 2 Milestone 1.csv";
+		String csvTrain;
+		String csvTest;
+		String row = "";
+
+		File csvFile = new File(outname);
+		if (!csvFile.isFile()) {
+			System.exit(-1);
+		}
+
+
+
+		//se Deliverable 2 Milestone 1 non è stato eseguito allora scrivi a mano la release.size
+
+		for(i=2;i<=(Math.floorDiv(releases.size(),2));i++) {//modifica questa linea se Milestone 1 non è stata eseguita
+
+
+			csvTrain = projectName+" Training for "+"Release "+i+".csv";
+			csvTest = projectName+" Testing for "+"Release "+i+".csv";
+
+
+			try (FileWriter fileWriterTrain= new FileWriter(csvTrain);
+					FileWriter fileWriterTest=new FileWriter(csvTest);
+					BufferedReader csvReader = new BufferedReader(new FileReader(outname));
+					){
+
+
+				fileWriterTrain.append("Version,Size(LOC),LOC_Touched,NR,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,Churn,MAX_Churn,AVG_Churn,Buggy");
+				fileWriterTrain.append("\n");
+
+				fileWriterTest.append("Version,Size(LOC),LOC_Touched,NR,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,Churn,MAX_Churn,AVG_Churn,Buggy");
+				fileWriterTest.append("\n");
+
+
+				//si leva l'header
+				row=csvReader.readLine();
+				while ((row = csvReader.readLine()) != null) {
+
+					String[] entry = row.split(",");
+
+					//per creare il dataset di training
+					if ((Integer.parseInt(entry[0]))<i) {
+
+						writePieceOfCsv(fileWriterTrain,entry);
+					} 
+					else if (Integer.parseInt(entry[0])==i) {
+						writePieceOfCsv(fileWriterTest,entry);
+					}
+
+					else {
+
+						break;
+					}
+				}//fine while
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			} 
+		}
+
+
+
+		Weka w = new Weka();
+
+		i=Math.floorDiv(releases.size(),2);
+		//i=Math.floorDiv(14,2);//commenta questa linea di codice e lascia quella sopra!
+
+		//a doClassification() gli si passa il max numero di versioni da classificare
+		w.doClassificationMilestone2(i, projectName);
+
+
+		//--------------------------------------------------------------------------------
+		//inizio ultima milestone Deliverable 2 
+
+		try {
+			w.doClassificationMilestone3(i, projectName);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
 }
