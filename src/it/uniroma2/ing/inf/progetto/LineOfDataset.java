@@ -16,8 +16,30 @@ public class LineOfDataset {
 	private int maxLOCAdded;
 	private int avgLOCAdded;
 	private String buggy= "NO";
+	private int nFix=0;	
+	
+	
+	
+	/**
+	 * @param nFix the nFix to set
+	 */
+	public void setnFix(int nFix) {
+		this.nFix = nFix;
+	}
+
 
 	
+	/**
+	 * @return the nFix
+	 */
+	public int getnFix() {
+		return nFix;
+	}
+
+
+
+
+
 	/**
 	 * @return the version
 	 */

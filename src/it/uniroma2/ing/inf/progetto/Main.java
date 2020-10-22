@@ -280,7 +280,7 @@ public class Main {
 			}
 
 			if(ticketWithAV) {
-				setFixedVersion(bug,date,filesAffected);
+				setFixedVersionAndSetNFixMetric(bug,date,filesAffected);
 			}
 			else if(ticketWithoutAV) {
 				setFixVersionWithoutAv(bug,date,filesAffected);
@@ -310,8 +310,9 @@ public class Main {
 
 		}
 
-		private void setFixedVersion(String bug,LocalDate date,ArrayList<String> filesAffected) {
+		private void setFixedVersionAndSetNFixMetric(String bug,LocalDate date,ArrayList<String> filesAffected) {
 			String fixedVers;
+			int count=0;
 			for (int i = 0; i < tickets.size(); i++) {
 				if(tickets.get(i).getKey().equals(bug)) {
 					//se è la prima versione
@@ -320,6 +321,26 @@ public class Main {
 					}
 					else {
 						fixedVers=iterateForFixVersion(date);
+					}
+
+					//set della metrica NFix
+					for (int n = 0; n < arrayOfEntryOfDataset.size(); n++) {  
+						//si aggiunge un'unità al numero di bug fixed in base alla versione associata
+						if(filesAffected.contains(arrayOfEntryOfDataset.get(i).getFileName())) {
+
+							//aumento contatore in modo da fermare il ciclo una volta osservate tutte le entry
+							// di quel file per tutte le versioni 
+							count++;
+
+							if (arrayOfEntryOfDataset.get(n).getVersion()>=Integer.parseInt(fixedVers)) {
+								arrayOfEntryOfDataset.get(n).setnFix(arrayOfEntryOfDataset.get(n).getnFix()+1);
+							}
+
+							//abbiamo controllato tutte le versioni del file
+							if(count==Math.floorDiv(fromReleaseIndexToDate.size(),2)) {
+								break;
+							}
+						}
 					}
 
 					tickets.get(i).setFixedVersion(fixedVers);
@@ -366,7 +387,7 @@ public class Main {
 				nAuth++;
 				nextLine =br.readLine();
 			}
-			
+
 
 			//cerchiamo l'oggetto giusto su cui scrivere
 			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) { 
@@ -408,10 +429,10 @@ public class Main {
 				addedLines=addedLines+Integer.parseInt(tokens[0]);
 				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
 				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
-				
+
 				nextLine =br.readLine();
 			}
-			
+
 			//abbiamo raggiunto la fine (la prima riga ha il numero di versione)
 			LineOfDataset l=new LineOfDataset(Integer.parseInt(version),filename); //id versione, filename
 			l.setSize(addedLines-deletedLines);//set del valore di LOC
@@ -424,7 +445,7 @@ public class Main {
 			String version;
 			ArrayList<Integer> realAddedLinesOverCommit=new ArrayList<>();
 			String nextLine;
-			int total=0;
+			int modified=0;
 			int addedLines=0;
 			int deletedLines=0;
 			int maxAddedlines=0;
@@ -451,25 +472,25 @@ public class Main {
 				numberOfCommit++;
 				nextLine=nextLine.trim();
 				tokens=nextLine.split("\\s+");
-				
+
 				//set of a local variable
 				realAddedLinesOfCommit=Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
-				
+
 				//per il Max_LOC_Added
 				maxAddedlines=Math.max(realAddedLinesOfCommit, maxAddedlines);
-				
-				
+
+
 				//solo se le righe inserite sono maggiori di quelle cancellate
 				if(realAddedLinesOfCommit>0) {
-				//per il AVG_LOC_Added
-				realAddedLinesOverCommit.add(realAddedLinesOfCommit);
+					//per il AVG_LOC_Added
+					realAddedLinesOverCommit.add(realAddedLinesOfCommit);
 				}
 				//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
 				addedLines=addedLines+Integer.parseInt(tokens[0]);
 				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
 				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
 				filename=tokens[2];
-				
+
 				//per CHURN (togliamo i commit che hanno solo modificato il codice e quindi risultano +1 sia in linee aggiunte che in quelle eliminate)
 				if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
 					realDeletedLOC=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
@@ -480,31 +501,34 @@ public class Main {
 				}
 				//per MAX_CHURN
 				maxChurn=Math.max(realAddedLinesOfCommit, maxChurn);
-				
+
 				realAddedLinesOfCommit=0;
-				
+
 				nextLine =br.readLine();
 			}
-			
+
 			avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numberOfCommit);
-			
-			
+			//provato empiricamente...
+			modified= deletedLines-sumOfRealDeletedLOC;
+
 			//abbiamo raggiunto la fine
-			
-			calculateNotIncrementalMetricsPart2(version,filename,addedLines+deletedLines,
-					maxAddedlines,realAddedLinesOverCommit,total,average,numberOfCommit,
+
+			calculateNotIncrementalMetricsPart2(version,filename,sumOfRealDeletedLOC,
+					maxAddedlines,realAddedLinesOverCommit,modified,average,numberOfCommit,
 					addedLines-deletedLines,maxChurn,avgChurn);
 
 		}
 
 		private void calculateNotIncrementalMetricsPart2(String version,String filename,
-				int lines,int maxAddedlines,ArrayList<Integer> addedLinesForEveryRevision
-				,int total,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
+				int sumOfRealDeletedLOC,int maxAddedlines,ArrayList<Integer> addedLinesForEveryRevision
+				,int modified,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
+			int totalAdded=0;
+
 			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
 			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
 				if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
 						arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
-					arrayOfEntryOfDataset.get(i).setLOCTouched(lines);
+
 					arrayOfEntryOfDataset.get(i).setMAXLOCAdded(maxAddedlines);
 					arrayOfEntryOfDataset.get(i).setNR(numOfCommit);
 					arrayOfEntryOfDataset.get(i).setChurn(Math.max(churn, 0));
@@ -514,16 +538,16 @@ public class Main {
 					//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
 					for(int n=0; n<addedLinesForEveryRevision.size(); n++){
 						if(addedLinesForEveryRevision.get(n) >= 0) {
-							total = total + addedLinesForEveryRevision.get(n);
+							totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
 						}
 					}
-					if (total>=0) {
-						average = Math.floorDiv(addedLinesForEveryRevision.size(),total);
+					if (totalAdded>=0) {
+						average = Math.floorDiv(addedLinesForEveryRevision.size(),totalAdded);
 					}
 					//--------------------------------------------------
 					arrayOfEntryOfDataset.get(i).setAVGLOCAdded(average);
-					arrayOfEntryOfDataset.get(i).setLOCAdded(total);
-
+					arrayOfEntryOfDataset.get(i).setLOCAdded(totalAdded);
+					arrayOfEntryOfDataset.get(i).setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
 					break;
 				}
 			}
@@ -1163,26 +1187,26 @@ public class Main {
 	}
 
 	private static void calculateMetrics(int version) {
-		
+
 		arrayOfEntryOfDataset= new ArrayList<>();
-		
-			//per ogni file nella release (version)
-			for (String s : filepathsOfTheCurrentRelease) {
-				calculatingIncrementalMetrics = true;
-				//il metodo getChurnMetrics creerà l'arrayList di entry LineOfDataSet
-				getLOCMetric(s,version);
-				calculatingIncrementalMetrics = false;
-				calculatingNotIncrementalMetrics = true;
-				//i metodi successivi modificano semplicemente le entry in quell'array
-				getNotIncrementalMetrics(s,version);
-				calculatingNotIncrementalMetrics = false;
-				calculatingNAuth= true;
-				getNumberOfAuthors(s,version);
-				calculatingNAuth= false;
 
-			}
+		//per ogni file nella release (version)
+		for (String s : filepathsOfTheCurrentRelease) {
+			calculatingIncrementalMetrics = true;
+			//il metodo getChurnMetrics creerà l'arrayList di entry LineOfDataSet
+			getLOCMetric(s,version);
+			calculatingIncrementalMetrics = false;
+			calculatingNotIncrementalMetrics = true;
+			//i metodi successivi modificano semplicemente le entry in quell'array
+			getNotIncrementalMetrics(s,version);
+			calculatingNotIncrementalMetrics = false;
+			calculatingNAuth= true;
+			getNumberOfAuthors(s,version);
+			calculatingNAuth= false;
 
-		 
+		}
+
+
 
 	}
 
@@ -1307,7 +1331,7 @@ public class Main {
 			checkFixedVersWithoutAV();
 			setBuggyWithoutAV();		 
 			filepathsOfTheCurrentRelease.clear();
-			}
+		}
 		writeResult();
 		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
@@ -1319,7 +1343,7 @@ public class Main {
 		////MILESTONE 2 DELIVERABLE 2
 
 		//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
-/*
+		/*
 		projectName= "OPENJPA";
 
 		outname = projectName + " Deliverable 2 Milestone 1.csv";
@@ -1402,6 +1426,6 @@ public class Main {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-*/
+		 */
 	}
 }
