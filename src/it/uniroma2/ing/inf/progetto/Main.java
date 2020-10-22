@@ -7,7 +7,6 @@ import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
-import java.io.FileReader;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -15,10 +14,13 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.TemporalAdjusters;
+import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -26,7 +28,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.io.FileWriter;
 
 /**
@@ -64,7 +65,6 @@ public class Main {
 	public static Map<LocalDateTime, String> releaseID;
 	public static List<LocalDateTime> releases;
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
-	private static Map<String,LocalDateTime> fromFileNameToDateOfCreation=new HashMap<>();
 	private static List<String> filepathsOfTheCurrentRelease;
 	private static List<LineOfDataset> arrayOfEntryOfDataset;
 	private static List<TicketTakenFromJIRA> tickets;
@@ -75,6 +75,7 @@ public class Main {
 	private static boolean calculatingNotIncrementalMetrics=false;
 	private static boolean calculatingNAuth=false;
 	private static boolean gettingLastCommit=false;
+	private static boolean calculatingAge=false;
 	private static boolean ticketWithAV= false;
 	private static boolean ticketWithoutAV= false;
 
@@ -233,7 +234,9 @@ public class Main {
 						gettingLastCommit(line,br);
 
 					}
-
+					else if (calculatingAge) {
+						getAgeMetrics(line,br);
+					}
 
 				}
 
@@ -401,15 +404,71 @@ public class Main {
 
 		}
 
+		private void getAgeMetrics(String line, BufferedReader br) throws IOException{
+
+			String filename;
+			String version;
+			String nextLine;
+			long age=0;
+			LocalDate firstDateCommit = null;
+			LocalDate laststDateCommit;
+			LocalDate DateCommit = null;
+			int count=0;
+			line=line.trim();
+			//"one or more whitespaces = \\s+"
+			String[] tokens = line.split("\\s+");
+
+			//il primo output è il numero di versione------------------------------
+			filename=tokens[0];
+			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
+
+
+			//lettura prox riga					      					      
+			nextLine =br.readLine();
+
+			while (nextLine != null) {
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+				count++;
+
+				try {
+					DateCommit = LocalDate.parse(tokens[0],format);
+				}
+				//abbiamo raggiunto la fine dello stream
+				catch (DateTimeParseException e) {
+					laststDateCommit=DateCommit;
+					version=tokens[0];
+
+					//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
+					for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
+						if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+								arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
+
+							Instant firstDay = firstDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
+							Instant lastDay = laststDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
+							age= ChronoUnit.WEEKS.between(firstDay, lastDay);
+
+							arrayOfEntryOfDataset.get(i).setAge(age);
+							break;
+						}
+					}
+				}
+				//primo commit nella storia del file
+				if (count==1) {
+					firstDateCommit =DateCommit;
+				}
+				nextLine =br.readLine();
+
+			}
+		}
+
+
 		private void calculateLOC(String line, BufferedReader br) throws IOException {
 			String nextLine;
 			String filename= "";
 			int addedLines=0;
 			int deletedLines=0;
 			String version;
-			int sumOfRealDeletedLOC=0;
-			int realDeletedLOC=0;
-			int maxChurn=0;
 			line=line.trim();
 			//"one or more whitespaces = \\s+"
 			String[] tokens = line.split("\\s+");
@@ -1204,9 +1263,39 @@ public class Main {
 			getNumberOfAuthors(s,version);
 			calculatingNAuth= false;
 
+			calculatingAge=true;
+			getAgeMetrics(s,version);
+			calculatingAge=false;
+
 		}
 
 
+
+	}
+
+	//questo metodo lancia un processo che calcola le metriche age-based 
+	private static void getAgeMetrics(String filename, int version) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+		String command;
+
+		try {
+			//git log --date=short --format="format:%ad" --reverse [filename]
+			command = ECHO+filename+
+					" && git log --until="+fromReleaseIndexToDate.get(String.valueOf(version))
+					+" --date=short --format=%ad --reverse "+filename+" && "
+					+ECHO+version;	
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
 
 	}
 
@@ -1289,8 +1378,6 @@ public class Main {
 	public static void main(String[] args) throws IOException, JSONException {
 
 		Integer i = 0;
-		String outname;
-
 
 		findNumberOfReleases();
 

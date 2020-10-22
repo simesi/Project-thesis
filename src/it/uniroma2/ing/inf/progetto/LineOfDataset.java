@@ -17,9 +17,105 @@ public class LineOfDataset {
 	private int avgLOCAdded;
 	private String buggy= "NO";
 	private int nFix=0;	
+	private long age;
+	private int WeightedAge;
+	private int chgSetSize;
+	private int maxChgSet;
+	private int avgChgSet;
 	
 	
 	
+	
+	/**
+	 * @return the age
+	 */
+	public long getAge() {
+		return age;
+	}
+
+
+
+	/**
+	 * @param age the age to set
+	 */
+	public void setAge(long age) {
+		this.age = age;
+	}
+
+
+
+	/**
+	 * @return the weightedAge
+	 */
+	public int getWeightedAge() {
+		return WeightedAge;
+	}
+
+
+
+	/**
+	 * @param weightedAge the weightedAge to set
+	 */
+	public void setWeightedAge(int weightedAge) {
+		WeightedAge = weightedAge;
+	}
+
+
+
+	/**
+	 * @return the chgSetSize
+	 */
+	public int getChgSetSize() {
+		return chgSetSize;
+	}
+
+
+
+	/**
+	 * @param chgSetSize the chgSetSize to set
+	 */
+	public void setChgSetSize(int chgSetSize) {
+		this.chgSetSize = chgSetSize;
+	}
+
+
+
+	/**
+	 * @return the maxChgSet
+	 */
+	public int getMaxChgSet() {
+		return maxChgSet;
+	}
+
+
+
+	/**
+	 * @param maxChgSet the maxChgSet to set
+	 */
+	public void setMaxChgSet(int maxChgSet) {
+		this.maxChgSet = maxChgSet;
+	}
+
+
+
+	/**
+	 * @return the avgChgSet
+	 */
+	public int getAvgChgSet() {
+		return avgChgSet;
+	}
+
+
+
+	/**
+	 * @param avgChgSet the avgChgSet to set
+	 */
+	public void setAvgChgSet(int avgChgSet) {
+		this.avgChgSet = avgChgSet;
+	}
+
+
+
 	/**
 	 * @param nFix the nFix to set
 	 */
