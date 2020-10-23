@@ -70,7 +70,7 @@ public class Main {
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 
-	private static boolean discard=false;
+	private static boolean doingCheckout=false;
 	private static boolean calculatingIncrementalMetrics=false;
 	private static boolean calculatingNotIncrementalMetrics=false;
 	private static boolean calculatingNAuth=false;
@@ -211,8 +211,8 @@ public class Main {
 
 				while ((line = br.readLine()) != null) {
 
-					if (discard) {
-						System.out.print("linea del checkout: "+line);
+					if (doingCheckout) {
+						gitCheckoutAtGivenCommit(line);
 					}
 
 					else if (calculatingIncrementalMetrics) {
@@ -248,6 +248,27 @@ public class Main {
 
 		}
 
+
+		private void gitCheckoutAtGivenCommit(String commit) {
+						
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			String command;
+
+			try {
+
+				command = "git checkout "+commit;	
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
 
 		private void gettingLastCommit(String line, BufferedReader br) throws IOException {
 
@@ -672,7 +693,7 @@ public class Main {
 			if (f.isFile()&&f.getName().matches(".*\\.java")) {
 
 
-				//discard of the local prefix to the file name (that depends to this program)
+				//doingCheckout of the local prefix to the file name (that depends to this program)
 
 				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
 
@@ -1355,12 +1376,13 @@ public class Main {
 
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 		try {
-
-			String command = "git checkout `git rev-list -n 1 --first-parent "
-					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master'";	
-			discard =true;
+              //ritorna l'id del commit su cui si farà il checkout
+			String command = "git rev-list -n 1 --first-parent "
+					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master ";
+			System.out.println(command);
+			doingCheckout =true;
 			runCommandOnShell(directory, command);
-			discard=false;
+			doingCheckout=false;
 
 
 		}
@@ -1405,7 +1427,7 @@ public class Main {
 
 			//search for java files in the cloned repository
 			searchFileJava(folder, filepathsOfTheCurrentRelease);
-
+            System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
 			calculateMetrics(i);
 
