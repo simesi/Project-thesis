@@ -212,7 +212,8 @@ public class Main {
 				while ((line = br.readLine()) != null) {
 
 					if (doingCheckout) {
-						gitCheckoutAtGivenCommit(line);
+						doingCheckout=false;
+						gitCheckoutAtGivenCommit(line,br);
 					}
 
 					else if (calculatingIncrementalMetrics) {
@@ -237,7 +238,9 @@ public class Main {
 					else if (calculatingAge) {
 						getAgeMetrics(line,br);
 					}
-
+					else {
+						System.out.println(line);
+					}
 				}
 
 			} catch (IOException ioe) {
@@ -249,15 +252,29 @@ public class Main {
 		}
 
 
-		private void gitCheckoutAtGivenCommit(String commit) {
-						
+		private void gitCheckoutAtGivenCommit(String commit, BufferedReader br) {
+
 			//directory da cui far partire il comando git    
 			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 			String command;
+			String nextLine = "";
+
+
+			commit=commit.trim();
+			String[] tokens = commit.split("\\s+");
+			String myCommit= tokens[0];
 
 			try {
+				nextLine =br.readLine();
 
-				command = "git checkout "+commit;	
+				//ora prendo la data dell'ultimo commit
+				while(nextLine != null) {
+					myCommit=nextLine;
+
+					nextLine =br.readLine();
+				}
+				//si prende solo l'ultimo commit dello stream (il più vecchio)
+				command = "git checkout "+myCommit;	
 
 				runCommandOnShell(directory, command);
 
@@ -430,7 +447,7 @@ public class Main {
 			String filename;
 			String version;
 			String nextLine;
-			long age=0;
+			int age=0;
 			LocalDate firstDateCommit = null;
 			LocalDate laststDateCommit;
 			LocalDate DateCommit = null;
@@ -467,8 +484,17 @@ public class Main {
 
 							Instant firstDay = firstDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
 							Instant lastDay = laststDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
-							age= ChronoUnit.WEEKS.between(firstDay, lastDay);
-
+							
+							LocalDateTime start= LocalDateTime.ofInstant(firstDay, ZoneId.systemDefault());
+							LocalDateTime last= LocalDateTime.ofInstant(lastDay, ZoneId.systemDefault());
+							age= Math.toIntExact(ChronoUnit.WEEKS.between(start, last));
+                        
+							arrayOfEntryOfDataset.get(i).setWeightedAge(0);
+							
+							if(arrayOfEntryOfDataset.get(i).getLOCTouched()>0) {
+							arrayOfEntryOfDataset.get(i).setWeightedAge(Math.toIntExact(Math.floorDiv(age,
+								arrayOfEntryOfDataset.get(i).getLOCTouched())));
+							}
 							arrayOfEntryOfDataset.get(i).setAge(age);
 							break;
 						}
@@ -509,10 +535,10 @@ public class Main {
 				addedLines=addedLines+Integer.parseInt(tokens[0]);
 				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
 				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
+				filename= tokens[2];
 
 				nextLine =br.readLine();
 			}
-
 			//abbiamo raggiunto la fine (la prima riga ha il numero di versione)
 			LineOfDataset l=new LineOfDataset(Integer.parseInt(version),filename); //id versione, filename
 			l.setSize(addedLines-deletedLines);//set del valore di LOC
@@ -587,7 +613,9 @@ public class Main {
 				nextLine =br.readLine();
 			}
 
-			avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numberOfCommit);
+			if(numberOfCommit!=0) {
+				avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numberOfCommit);
+			}
 			//provato empiricamente...
 			modified= deletedLines-sumOfRealDeletedLOC;
 
@@ -596,45 +624,45 @@ public class Main {
 			calculateNotIncrementalMetricsPart2(version,filename,sumOfRealDeletedLOC,
 					maxAddedlines,realAddedLinesOverCommit,modified,average,numberOfCommit,
 					addedLines-deletedLines,maxChurn,avgChurn);
-
 		}
+	}
 
-		private void calculateNotIncrementalMetricsPart2(String version,String filename,
-				int sumOfRealDeletedLOC,int maxAddedlines,ArrayList<Integer> addedLinesForEveryRevision
-				,int modified,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
-			int totalAdded=0;
+	private static void calculateNotIncrementalMetricsPart2(String version,String filename,
+			int sumOfRealDeletedLOC,int maxAddedlines,ArrayList<Integer> addedLinesForEveryRevision
+			,int modified,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
+		int totalAdded=0;
 
-			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
-				if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-						arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
+		//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
+		for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
+			if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+					arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
 
-					arrayOfEntryOfDataset.get(i).setMAXLOCAdded(maxAddedlines);
-					arrayOfEntryOfDataset.get(i).setNR(numOfCommit);
-					arrayOfEntryOfDataset.get(i).setChurn(Math.max(churn, 0));
-					arrayOfEntryOfDataset.get(i).setChurn(maxChurn);
-					arrayOfEntryOfDataset.get(i).setAVGChurn(avgChurn);
+				arrayOfEntryOfDataset.get(i).setMAXLOCAdded(maxAddedlines);
+				arrayOfEntryOfDataset.get(i).setNR(numOfCommit);
+				arrayOfEntryOfDataset.get(i).setChurn(Math.max(churn, 0));
+				arrayOfEntryOfDataset.get(i).setChurn(maxChurn);
+				arrayOfEntryOfDataset.get(i).setAVGChurn(avgChurn);
 
-					//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
-					for(int n=0; n<addedLinesForEveryRevision.size(); n++){
-						if(addedLinesForEveryRevision.get(n) >= 0) {
-							totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
-						}
+				//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
+				for(int n=0; n<addedLinesForEveryRevision.size(); n++){
+					if(addedLinesForEveryRevision.get(n) >= 0) {
+						totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
 					}
-					if (totalAdded>=0) {
-						average = Math.floorDiv(addedLinesForEveryRevision.size(),totalAdded);
-					}
-					//--------------------------------------------------
-					arrayOfEntryOfDataset.get(i).setAVGLOCAdded(average);
-					arrayOfEntryOfDataset.get(i).setLOCAdded(totalAdded);
-					arrayOfEntryOfDataset.get(i).setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
-					break;
 				}
+				if (totalAdded>0) {
+					average = Math.floorDiv(addedLinesForEveryRevision.size(),totalAdded);
+				}
+				//--------------------------------------------------
+				arrayOfEntryOfDataset.get(i).setAVGLOCAdded(average);
+				arrayOfEntryOfDataset.get(i).setLOCAdded(totalAdded);
+				arrayOfEntryOfDataset.get(i).setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
+				break;
 			}
 		}
-
-
 	}
+
+
+
 
 	/*
 	  Java isn't able to delete folders with data in it. We have to delete
@@ -873,7 +901,9 @@ public class Main {
 
 
 
-			fileWriter.append("Version,File Name,Size(LOC), LOC_Touched,NR,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,Churn,MAX_Churn,AVG_Churn,Buggy");
+			fileWriter.append("Version,File Name,Size(LOC), LOC_Touched,"
+					+ "NR,NFix,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,"
+					+ "Churn,MAX_Churn,AVG_Churn,Age,Buggy");
 			fileWriter.append("\n");
 			for ( LineOfDataset line : arrayOfEntryOfDataset) {
 
@@ -886,6 +916,8 @@ public class Main {
 				fileWriter.append(String.valueOf(line.getLOCTouched()));
 				fileWriter.append(",");
 				fileWriter.append(String.valueOf(line.getNR()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getnFix()));
 				fileWriter.append(",");
 				fileWriter.append(String.valueOf(line.getNauth()));
 				fileWriter.append(",");
@@ -900,6 +932,8 @@ public class Main {
 				fileWriter.append(String.valueOf(line.getMaxChurn()));
 				fileWriter.append(",");
 				fileWriter.append(String.valueOf(line.getAVGChurn()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getAge()));
 				fileWriter.append(",");
 				fileWriter.append(line.getBuggy());
 				fileWriter.append("\n");
@@ -1144,7 +1178,7 @@ public class Main {
 
 	}
 
-	private static void startToCalculateBugginess() throws JSONException, IOException {
+	private static void startToCalculateBugginessWithKnownAV() throws JSONException, IOException {
 
 		//inizio operazioni per calcolo bugginess
 		tickets=new ArrayList<>();
@@ -1268,12 +1302,13 @@ public class Main {
 
 	private static void calculateMetrics(int version) {
 
-		arrayOfEntryOfDataset= new ArrayList<>();
+		
 
 		//per ogni file nella release (version)
 		for (String s : filepathsOfTheCurrentRelease) {
+
 			calculatingIncrementalMetrics = true;
-			//il metodo getChurnMetrics creerà l'arrayList di entry LineOfDataSet
+			//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
 			getLOCMetric(s,version);
 			calculatingIncrementalMetrics = false;
 			calculatingNotIncrementalMetrics = true;
@@ -1288,8 +1323,9 @@ public class Main {
 			getAgeMetrics(s,version);
 			calculatingAge=false;
 
-		}
 
+		}
+		System.out.println("\n\n Evaluated metrics for version "+version+"\n\n");
 
 
 	}
@@ -1376,10 +1412,10 @@ public class Main {
 
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 		try {
-              //ritorna l'id del commit su cui si farà il checkout
-			String command = "git rev-list -n 1 --first-parent "
+			//ritorna l'id del commit su cui si farà il checkout
+			String command = "git rev-list "
 					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master ";
-			System.out.println(command);
+
 			doingCheckout =true;
 			runCommandOnShell(directory, command);
 			doingCheckout=false;
@@ -1399,7 +1435,7 @@ public class Main {
 
 	public static void main(String[] args) throws IOException, JSONException {
 
-		Integer i = 0;
+		
 
 		findNumberOfReleases();
 
@@ -1414,9 +1450,10 @@ public class Main {
 			System.exit(-1);
 		}		
 
-
+		arrayOfEntryOfDataset= new ArrayList<>();
+		
 		//per ogni versione nella primà metà delle release
-		for(i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+		for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
 
 
 			gitCheckoutAtGivenVersion(i);
@@ -1427,20 +1464,35 @@ public class Main {
 
 			//search for java files in the cloned repository
 			searchFileJava(folder, filepathsOfTheCurrentRelease);
-            System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+			System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
 			calculateMetrics(i);
+			filepathsOfTheCurrentRelease.clear();
+		}
 
-			startToCalculateBugginess();
+		//facciamo  un altro clone per poter calcolare la bugginess slla versione aggiornata del progetto
+		try {
+			//cancellazione della directory clonata del progetto (che non è aggiornata)   
+			recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
+
+			//si fa il clone della versione odierna del progetto
+			gitClone();	
+		}
+		catch (InterruptedException | IOException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+			System.exit(-1);
+		}
+			startToCalculateBugginessWithKnownAV();
 
 			startToGetFixedVersWithAV();
 			setBuggy();
 
-			startToGetCreatedVersWithoutAV();
-			checkFixedVersWithoutAV();
-			setBuggyWithoutAV();		 
-			filepathsOfTheCurrentRelease.clear();
-		}
+			//startToGetCreatedVersWithoutAV();
+			//checkFixedVersWithoutAV();
+			//setBuggyWithoutAV();		 
+			
+		
 		writeResult();
 		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));

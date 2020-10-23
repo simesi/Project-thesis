@@ -17,7 +17,7 @@ public class LineOfDataset {
 	private int avgLOCAdded;
 	private String buggy= "NO";
 	private int nFix=0;	
-	private long age;
+	private int age;
 	private int WeightedAge;
 	private int chgSetSize;
 	private int maxChgSet;
@@ -29,7 +29,7 @@ public class LineOfDataset {
 	/**
 	 * @return the age
 	 */
-	public long getAge() {
+	public int getAge() {
 		return age;
 	}
 
@@ -38,7 +38,7 @@ public class LineOfDataset {
 	/**
 	 * @param age the age to set
 	 */
-	public void setAge(long age) {
+	public void setAge(int age) {
 		this.age = age;
 	}
 
