@@ -239,7 +239,7 @@ public class Main {
 						getAgeMetrics(line,br);
 					}
 					else {
-						System.out.println(line);
+						//System.out.println(line);
 					}
 				}
 
@@ -449,15 +449,21 @@ public class Main {
 			String nextLine;
 			int age=0;
 			LocalDate firstDateCommit = null;
-			LocalDate laststDateCommit;
+			LocalDate lastDateCommit = null;
 			LocalDate DateCommit = null;
 			int count=0;
 			line=line.trim();
 			//"one or more whitespaces = \\s+"
 			String[] tokens = line.split("\\s+");
 
-			//il primo output è il numero di versione------------------------------
+			//il primo output è il filename ------------------------------
 			filename=tokens[0];
+
+			//lettura prox riga	che ha la version				      					      
+			nextLine =br.readLine();
+			tokens = nextLine.split("\\s+");
+			version=tokens[0];
+
 			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
 
 
@@ -469,43 +475,43 @@ public class Main {
 				tokens=nextLine.split("\\s+");
 				count++;
 
-				try {
-					DateCommit = LocalDate.parse(tokens[0],format);
-				}
-				//abbiamo raggiunto la fine dello stream
-				catch (DateTimeParseException e) {
-					laststDateCommit=DateCommit;
-					version=tokens[0];
+				DateCommit = LocalDate.parse(tokens[0],format);
+				lastDateCommit=DateCommit;
 
-					//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-					for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
-						if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-								arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
 
-							Instant firstDay = firstDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
-							Instant lastDay = laststDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
-							
-							LocalDateTime start= LocalDateTime.ofInstant(firstDay, ZoneId.systemDefault());
-							LocalDateTime last= LocalDateTime.ofInstant(lastDay, ZoneId.systemDefault());
-							age= Math.toIntExact(ChronoUnit.WEEKS.between(start, last));
-                        
-							arrayOfEntryOfDataset.get(i).setWeightedAge(0);
-							
-							if(arrayOfEntryOfDataset.get(i).getLOCTouched()>0) {
-							arrayOfEntryOfDataset.get(i).setWeightedAge(Math.toIntExact(Math.floorDiv(age,
-								arrayOfEntryOfDataset.get(i).getLOCTouched())));
-							}
-							arrayOfEntryOfDataset.get(i).setAge(age);
-							break;
-						}
-					}
-				}
 				//primo commit nella storia del file
 				if (count==1) {
 					firstDateCommit =DateCommit;
 				}
 				nextLine =br.readLine();
+			}
 
+			//fine dello stream (ultimo output è l'ultima data di commit)
+
+			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
+			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
+				if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+						arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
+
+					//Instant firstDay = firstDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
+					//Instant lastDay = lastDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
+
+					//LocalDateTime start= LocalDateTime.ofInstant(firstDay, ZoneId.systemDefault());
+					//LocalDateTime last= LocalDateTime.ofInstant(lastDay, ZoneId.systemDefault());
+					
+					//System.out.println("First commit: "+firstDateCommit);
+					//System.out.println("Last commit: "+lastDateCommit);
+					age= Math.toIntExact(ChronoUnit.WEEKS.between(firstDateCommit,lastDateCommit));
+
+					arrayOfEntryOfDataset.get(i).setWeightedAge(0);
+
+					if(arrayOfEntryOfDataset.get(i).getLOCTouched()>0) {
+						arrayOfEntryOfDataset.get(i).setWeightedAge(Math.floorDiv(age,
+								arrayOfEntryOfDataset.get(i).getLOCTouched()));
+					}
+					arrayOfEntryOfDataset.get(i).setAge(age);
+					break;
+				}
 			}
 		}
 
@@ -640,17 +646,17 @@ public class Main {
 				arrayOfEntryOfDataset.get(i).setMAXLOCAdded(maxAddedlines);
 				arrayOfEntryOfDataset.get(i).setNR(numOfCommit);
 				arrayOfEntryOfDataset.get(i).setChurn(Math.max(churn, 0));
-				arrayOfEntryOfDataset.get(i).setChurn(maxChurn);
+				arrayOfEntryOfDataset.get(i).setMaxChurn(maxChurn);
 				arrayOfEntryOfDataset.get(i).setAVGChurn(avgChurn);
 
 				//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
 				for(int n=0; n<addedLinesForEveryRevision.size(); n++){
-					if(addedLinesForEveryRevision.get(n) >= 0) {
-						totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
-					}
+
+					totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
+
 				}
 				if (totalAdded>0) {
-					average = Math.floorDiv(addedLinesForEveryRevision.size(),totalAdded);
+					average = Math.floorDiv(totalAdded,addedLinesForEveryRevision.size());
 				}
 				//--------------------------------------------------
 				arrayOfEntryOfDataset.get(i).setAVGLOCAdded(average);
@@ -903,7 +909,7 @@ public class Main {
 
 			fileWriter.append("Version,File Name,Size(LOC), LOC_Touched,"
 					+ "NR,NFix,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,"
-					+ "Churn,MAX_Churn,AVG_Churn,Age,Buggy");
+					+ "Churn,MAX_Churn,AVG_Churn,Age,Weighted_Age,Buggy");
 			fileWriter.append("\n");
 			for ( LineOfDataset line : arrayOfEntryOfDataset) {
 
@@ -934,6 +940,8 @@ public class Main {
 				fileWriter.append(String.valueOf(line.getAVGChurn()));
 				fileWriter.append(",");
 				fileWriter.append(String.valueOf(line.getAge()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getWeightedAge()));
 				fileWriter.append(",");
 				fileWriter.append(line.getBuggy());
 				fileWriter.append("\n");
@@ -1302,7 +1310,7 @@ public class Main {
 
 	private static void calculateMetrics(int version) {
 
-		
+
 
 		//per ogni file nella release (version)
 		for (String s : filepathsOfTheCurrentRelease) {
@@ -1325,7 +1333,7 @@ public class Main {
 
 
 		}
-		System.out.println("\n\n Evaluated metrics for version "+version+"\n\n");
+		System.out.println("########## Evaluated metrics for version "+version+"############");
 
 
 	}
@@ -1340,9 +1348,7 @@ public class Main {
 		try {
 			//git log --date=short --format="format:%ad" --reverse [filename]
 			command = ECHO+filename+
-					" && git log --until="+fromReleaseIndexToDate.get(String.valueOf(version))
-					+" --date=short --format=%ad --reverse "+filename+" && "
-					+ECHO+version;	
+					" && "+ECHO+version+" && git log --date=short --format=%ad --reverse "+filename	;	
 
 			runCommandOnShell(directory, command);
 
@@ -1435,7 +1441,7 @@ public class Main {
 
 	public static void main(String[] args) throws IOException, JSONException {
 
-		
+
 
 		findNumberOfReleases();
 
@@ -1451,7 +1457,7 @@ public class Main {
 		}		
 
 		arrayOfEntryOfDataset= new ArrayList<>();
-		
+
 		//per ogni versione nella primà metà delle release
 		for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
 
@@ -1483,16 +1489,16 @@ public class Main {
 			Thread.currentThread().interrupt();
 			System.exit(-1);
 		}
-			startToCalculateBugginessWithKnownAV();
+		startToCalculateBugginessWithKnownAV();
 
-			startToGetFixedVersWithAV();
-			setBuggy();
+		startToGetFixedVersWithAV();
+		setBuggy();
 
-			//startToGetCreatedVersWithoutAV();
-			//checkFixedVersWithoutAV();
-			//setBuggyWithoutAV();		 
-			
-		
+		//startToGetCreatedVersWithoutAV();
+		//checkFixedVersWithoutAV();
+		//setBuggyWithoutAV();		 
+
+
 		writeResult();
 		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
