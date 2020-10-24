@@ -69,11 +69,15 @@ public class Main {
 	private static List<LineOfDataset> arrayOfEntryOfDataset;
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
+	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
+	//del numero di files committati insieme
 
 	private static boolean doingCheckout=false;
 	private static boolean calculatingIncrementalMetrics=false;
 	private static boolean calculatingNotIncrementalMetrics=false;
 	private static boolean calculatingNAuth=false;
+	private static boolean calculatingChgSetSizePhaseOne=false;
+	private static boolean calculatingChgSetSizePhaseTwo=false;
 	private static boolean gettingLastCommit=false;
 	private static boolean calculatingAge=false;
 	private static boolean ticketWithAV= false;
@@ -238,6 +242,12 @@ public class Main {
 					else if (calculatingAge) {
 						getAgeMetrics(line,br);
 					}
+					else if (calculatingChgSetSizePhaseOne) {
+						getFileCommitsOnGivenRelease(line,br);
+					}
+					else if (calculatingChgSetSizePhaseTwo) {
+						getFileCommittedTogheter(line,br);
+					}
 					else {
 						//System.out.println(line);
 					}
@@ -251,6 +261,141 @@ public class Main {
 
 		}
 
+		//per ogni commit si chiamerà questo metodo che ritorna i pathname dei file committati
+		private void getFileCommittedTogheter(String input, BufferedReader br) {
+			String version="";
+			String nextLine="";
+			int count=0;
+
+			input=input.trim();
+			String[] tokens = input.split("\\s+");
+			String filename= tokens[0];
+			try {
+				//la seconda riga ci ritorna il numero di versione
+				nextLine =br.readLine();
+
+				nextLine=nextLine.trim();
+				tokens = nextLine.split("\\s+");
+				version= tokens[0];
+
+				//dalla terza riga in poi otteniamo tutti i filepath modificati dal commit 
+				nextLine =br.readLine();
+
+				//per ogni file
+				while(nextLine != null) {
+					count++;
+
+					nextLine =br.readLine();
+
+				}
+				calculatingChgSetSizePhaseTwo=false;
+				//calcoliamo la metrica solo per i commit con più di un file committato
+				if (count>1) {
+					chgSetSizeList.add(count);	
+				}	
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} 
+
+
+
+		}
+
+		private void getFileCommitsOnGivenRelease(String input, BufferedReader br) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			String command;
+			String nextLine = "";
+			String myCommit="";
+			String version="";
+			int myChgSetSize=0;
+			int maxChgSet=0;
+			int count=0;
+
+
+			input=input.trim();
+			String[] tokens = input.split("\\s+");
+			String filename= tokens[0];
+			try {
+				//la seconda riga ci ritorna il numero di versione
+				nextLine =br.readLine();
+
+				nextLine=nextLine.trim();
+				tokens = nextLine.split("\\s+");
+				version= tokens[0];
+
+				//dalla terza riga in poi otteniamo tutti i commit che hanno "lavorato" sul file filename 
+				nextLine =br.readLine();
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} 
+
+
+			calculatingChgSetSizePhaseOne=false;
+			//ora prendo la data dell'ultimo commit
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				tokens = nextLine.split("\\s+");
+				myCommit= tokens[0];
+
+
+
+				//per stampare i filepath dei file java cambiati al commit passato
+				command = ECHO+filename+" && "+ECHO+version+
+						" && git diff-tree --no-commit-id --name-only -r "+myCommit+""
+						+ " --grep= *.java"; 
+
+
+ 
+				try {
+
+					calculatingChgSetSizePhaseTwo=true;
+					runCommandOnShell(directory, command);
+					nextLine =br.readLine();
+
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.exit(-1);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					Thread.currentThread().interrupt();
+				}
+
+
+			}
+
+			if (chgSetSizeList.size()>0) {
+				//adesso si sono esaminati tutti i commit e quindi si calcola la metrica ChgSetSize
+				for (int index = 0; index < chgSetSizeList.size(); index++) {
+					count++;
+					maxChgSet=Math.max(chgSetSizeList.get(index), maxChgSet);
+					myChgSetSize=myChgSetSize+chgSetSizeList.get(index);
+				}			
+			}
+
+			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
+			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
+				if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+						arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
+					arrayOfEntryOfDataset.get(i).setChgSetSize(myChgSetSize);
+					arrayOfEntryOfDataset.get(i).setMaxChgSet(maxChgSet);
+					if(count>0) {
+						arrayOfEntryOfDataset.get(i).setAvgChgSet(Math.floorDiv(myChgSetSize, count));
+					}
+					else {
+						arrayOfEntryOfDataset.get(i).setAvgChgSet(count);
+					}
+					//clear dellal lista che verrà ripopolata per analizzare la metrica su un altro file
+					chgSetSizeList.clear();
+				}
+			}
+
+		}
 
 		private void gitCheckoutAtGivenCommit(String commit, BufferedReader br) {
 
@@ -498,7 +643,7 @@ public class Main {
 
 					//LocalDateTime start= LocalDateTime.ofInstant(firstDay, ZoneId.systemDefault());
 					//LocalDateTime last= LocalDateTime.ofInstant(lastDay, ZoneId.systemDefault());
-					
+
 					//System.out.println("First commit: "+firstDateCommit);
 					//System.out.println("Last commit: "+lastDateCommit);
 					age= Math.toIntExact(ChronoUnit.WEEKS.between(firstDateCommit,lastDateCommit));
@@ -900,7 +1045,7 @@ public class Main {
 	}
 
 	private static void writeResult() {
-		String outname = projectName + " Deliverable 2 Milestone 1.csv";
+		String outname = projectName + " Metrics.csv";
 		//Name of CSV for output
 
 		try (FileWriter fileWriter = new FileWriter(outname)){
@@ -909,7 +1054,7 @@ public class Main {
 
 			fileWriter.append("Version,File Name,Size(LOC), LOC_Touched,"
 					+ "NR,NFix,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,"
-					+ "Churn,MAX_Churn,AVG_Churn,Age,Weighted_Age,Buggy");
+					+ "Churn,MAX_Churn,AVG_Churn,ChgSetSize,MAX_ChgSet,AVG_ChgSet,Age,Weighted_Age,Buggy");
 			fileWriter.append("\n");
 			for ( LineOfDataset line : arrayOfEntryOfDataset) {
 
@@ -938,6 +1083,12 @@ public class Main {
 				fileWriter.append(String.valueOf(line.getMaxChurn()));
 				fileWriter.append(",");
 				fileWriter.append(String.valueOf(line.getAVGChurn()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getChgSetSize()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getMaxChgSet()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getAvgChgSet()));
 				fileWriter.append(",");
 				fileWriter.append(String.valueOf(line.getAge()));
 				fileWriter.append(",");
@@ -1331,9 +1482,48 @@ public class Main {
 			getAgeMetrics(s,version);
 			calculatingAge=false;
 
+			calculatingChgSetSizePhaseOne=true;
+			getChgSetMetrics(s,version);
+			calculatingChgSetSizePhaseOne=false;
 
 		}
 		System.out.println("########## Evaluated metrics for version "+version+"############");
+
+
+	}
+
+	//questo metodo lancia un processo che calcola le metriche ChgSet-based 
+	private static void getChgSetMetrics(String filename, int version) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+		String command;
+
+		//il comando sottostante ritorna la lista dei commit che hanno modificato il file 
+		try {
+			if(version>1) {
+				//git log --follow --pretty=format:"%H"  [filename]
+				command = ECHO+filename+
+						" && "+ECHO+version+" && git log --follow --pretty=format:%H "
+						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+" "+filename;	
+			}
+			else{
+				command = ECHO+filename+
+						" && "+ECHO+version+" && git log --follow --pretty=format:%H "+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+" "+filename;	
+
+			}
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+
 
 
 	}
@@ -1467,6 +1657,7 @@ public class Main {
 
 			File folder = new File(projectName);
 			filepathsOfTheCurrentRelease = new ArrayList<>();
+			chgSetSizeList=new ArrayList<>();
 
 			//search for java files in the cloned repository
 			searchFileJava(folder, filepathsOfTheCurrentRelease);
