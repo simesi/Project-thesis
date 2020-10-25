@@ -2,5 +2,10 @@ language: java
 jdk: 
 - openjdk8
 
+addons:
+ sonarcloud: 
+  organization: "simesi"
+  token: d08a65dbf2e71336b1ccf33a593f6bb9f1c003bc
 script: 
-- ant build
+- ant build 
+- sonar-scanner
