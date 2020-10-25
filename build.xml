@@ -19,8 +19,6 @@
         <mkdir dir="bin"/>
         <copy includeemptydirs="false" todir="bin">
             <fileset dir="src">
-                <exclude name="**/*.launch"/>
-                <exclude name="**/*.xtend"/>
                 <exclude name="**/*.java"/>
             </fileset>
         </copy>
@@ -51,5 +49,10 @@
     <target description="compile project with Eclipse compiler" name="build-eclipse-compiler">
         <property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
         <antcall target="build"/>
+    </target>
+    <target name="Main (13)">
+        <java classname="it.uniroma2.ing.inf.progetto.Main" failonerror="true" fork="yes">
+            <classpath refid="Project Thesis.classpath"/>
+        </java>
     </target>
 </project>
