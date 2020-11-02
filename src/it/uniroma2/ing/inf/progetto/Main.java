@@ -10,6 +10,9 @@ import java.io.File;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import weka.knowledgeflow.steps.SetPropertiesFromEnvironment;
+
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -66,7 +69,7 @@ public class Main {
 	public static List<LocalDateTime> releases;
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
 	private static List<String> filepathsOfTheCurrentRelease;
-	private static List<LineOfDataset> arrayOfEntryOfDataset;
+	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
@@ -96,6 +99,11 @@ public class Main {
 	private static final String FORMAT_DATE= "yyyy-MM-dd";
 	private static final String RELEASE_DATE="releaseDate";
 	private static final int YEARS_INTERVAL=14;
+	private static final String pathToFinerGitJar="E:\\FinerGit\\FinerGit\\build\\libs";
+	private static final String PATH_TO_BATCH_FILE="E:\\Programmi\\Eclipse\\Project_Thesis\\execFinGit.bat";
+
+	private static boolean studyMethodMetrics=true; //calcola solo le metriche di metodo
+	private static boolean studyClassMetrics=false; //calcola solo le metriche di classe
 	//--------------------------
 
 
@@ -152,6 +160,7 @@ public class Main {
 
 				.directory(directory.toFile());
 
+
 		runProcAndWait(pb);
 
 	}
@@ -189,7 +198,15 @@ public class Main {
 		runProcAndWait(pb);
 
 	}
+	
+	//questo metodo esegue un file batch incaricato di produrre la directory prodotta da FinerGit della repository
+	public static void runFinerGitCloneUntilVersion(Path directory,int version) throws IOException, InterruptedException {
 
+		ProcessBuilder pb = new ProcessBuilder(PATH_TO_BATCH_FILE,directory.toString(),String.valueOf(version));	
+		
+		runProcAndWait(pb);
+
+	}
 
 
 
@@ -215,6 +232,7 @@ public class Main {
 
 				while ((line = br.readLine()) != null) {
 
+					
 					if (doingCheckout) {
 						doingCheckout=false;
 						gitCheckoutAtGivenCommit(line,br);
@@ -249,7 +267,7 @@ public class Main {
 						getFileCommittedTogheter(line,br);
 					}
 					else {
-						//System.out.println(line);
+						System.out.println(line);
 					}
 				}
 
@@ -351,7 +369,7 @@ public class Main {
 						+ " --grep= *.java"; 
 
 
- 
+
 				try {
 
 					calculatingChgSetSizePhaseTwo=true;
@@ -379,16 +397,16 @@ public class Main {
 			}
 
 			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
-				if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-						arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
-					arrayOfEntryOfDataset.get(i).setChgSetSize(myChgSetSize);
-					arrayOfEntryOfDataset.get(i).setMaxChgSet(maxChgSet);
+			for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) {  
+				if((arrayOfEntryOfClassDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+						arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename)) {
+					arrayOfEntryOfClassDataset.get(i).setChgSetSize(myChgSetSize);
+					arrayOfEntryOfClassDataset.get(i).setMaxChgSet(maxChgSet);
 					if(count>0) {
-						arrayOfEntryOfDataset.get(i).setAvgChgSet(Math.floorDiv(myChgSetSize, count));
+						arrayOfEntryOfClassDataset.get(i).setAvgChgSet(Math.floorDiv(myChgSetSize, count));
 					}
 					else {
-						arrayOfEntryOfDataset.get(i).setAvgChgSet(count);
+						arrayOfEntryOfClassDataset.get(i).setAvgChgSet(count);
 					}
 					//clear dellal lista che verrà ripopolata per analizzare la metrica su un altro file
 					chgSetSizeList.clear();
@@ -510,16 +528,16 @@ public class Main {
 					}
 
 					//set della metrica NFix
-					for (int n = 0; n < arrayOfEntryOfDataset.size(); n++) {  
+					for (int n = 0; n < arrayOfEntryOfClassDataset.size(); n++) {  
 						//si aggiunge un'unità al numero di bug fixed in base alla versione associata
-						if(filesAffected.contains(arrayOfEntryOfDataset.get(i).getFileName())) {
+						if(filesAffected.contains(arrayOfEntryOfClassDataset.get(i).getFileName())) {
 
 							//aumento contatore in modo da fermare il ciclo una volta osservate tutte le entry
 							// di quel file per tutte le versioni 
 							count++;
 
-							if (arrayOfEntryOfDataset.get(n).getVersion()>=Integer.parseInt(fixedVers)) {
-								arrayOfEntryOfDataset.get(n).setnFix(arrayOfEntryOfDataset.get(n).getnFix()+1);
+							if (arrayOfEntryOfClassDataset.get(n).getVersion()>=Integer.parseInt(fixedVers)) {
+								arrayOfEntryOfClassDataset.get(n).setnFix(arrayOfEntryOfClassDataset.get(n).getnFix()+1);
 							}
 
 							//abbiamo controllato tutte le versioni del file
@@ -576,9 +594,9 @@ public class Main {
 
 
 			//cerchiamo l'oggetto giusto su cui scrivere
-			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) { 
-				if((arrayOfEntryOfDataset.get(i).getVersion()==version) && (arrayOfEntryOfDataset.get(i).getFileName().equals(filename))) {
-					arrayOfEntryOfDataset.get(i).setNauth(nAuth);
+			for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) { 
+				if((arrayOfEntryOfClassDataset.get(i).getVersion()==version) && (arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename))) {
+					arrayOfEntryOfClassDataset.get(i).setNauth(nAuth);
 
 					break;
 				}
@@ -634,9 +652,9 @@ public class Main {
 			//fine dello stream (ultimo output è l'ultima data di commit)
 
 			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-			for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
-				if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-						arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
+			for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) {  
+				if((arrayOfEntryOfClassDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+						arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename)) {
 
 					//Instant firstDay = firstDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
 					//Instant lastDay = lastDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
@@ -648,13 +666,13 @@ public class Main {
 					//System.out.println("Last commit: "+lastDateCommit);
 					age= Math.toIntExact(ChronoUnit.WEEKS.between(firstDateCommit,lastDateCommit));
 
-					arrayOfEntryOfDataset.get(i).setWeightedAge(0);
+					arrayOfEntryOfClassDataset.get(i).setWeightedAge(0);
 
-					if(arrayOfEntryOfDataset.get(i).getLOCTouched()>0) {
-						arrayOfEntryOfDataset.get(i).setWeightedAge(Math.floorDiv(age,
-								arrayOfEntryOfDataset.get(i).getLOCTouched()));
+					if(arrayOfEntryOfClassDataset.get(i).getLOCTouched()>0) {
+						arrayOfEntryOfClassDataset.get(i).setWeightedAge(Math.floorDiv(age,
+								arrayOfEntryOfClassDataset.get(i).getLOCTouched()));
 					}
-					arrayOfEntryOfDataset.get(i).setAge(age);
+					arrayOfEntryOfClassDataset.get(i).setAge(age);
 					break;
 				}
 			}
@@ -691,10 +709,10 @@ public class Main {
 				nextLine =br.readLine();
 			}
 			//abbiamo raggiunto la fine (la prima riga ha il numero di versione)
-			LineOfDataset l=new LineOfDataset(Integer.parseInt(version),filename); //id versione, filename
+			LineOfClassDataset l=new LineOfClassDataset(Integer.parseInt(version),filename); //id versione, filename
 			l.setSize(addedLines-deletedLines);//set del valore di LOC
 
-			arrayOfEntryOfDataset.add(l);
+			arrayOfEntryOfClassDataset.add(l);
 
 		}
 
@@ -784,15 +802,15 @@ public class Main {
 		int totalAdded=0;
 
 		//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-		for (int i = 0; i < arrayOfEntryOfDataset.size(); i++) {  
-			if((arrayOfEntryOfDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-					arrayOfEntryOfDataset.get(i).getFileName().equals(filename)) {
+		for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) {  
+			if((arrayOfEntryOfClassDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+					arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename)) {
 
-				arrayOfEntryOfDataset.get(i).setMAXLOCAdded(maxAddedlines);
-				arrayOfEntryOfDataset.get(i).setNR(numOfCommit);
-				arrayOfEntryOfDataset.get(i).setChurn(Math.max(churn, 0));
-				arrayOfEntryOfDataset.get(i).setMaxChurn(maxChurn);
-				arrayOfEntryOfDataset.get(i).setAVGChurn(avgChurn);
+				arrayOfEntryOfClassDataset.get(i).setMAXLOCAdded(maxAddedlines);
+				arrayOfEntryOfClassDataset.get(i).setNR(numOfCommit);
+				arrayOfEntryOfClassDataset.get(i).setChurn(Math.max(churn, 0));
+				arrayOfEntryOfClassDataset.get(i).setMaxChurn(maxChurn);
+				arrayOfEntryOfClassDataset.get(i).setAVGChurn(avgChurn);
 
 				//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
 				for(int n=0; n<addedLinesForEveryRevision.size(); n++){
@@ -804,9 +822,9 @@ public class Main {
 					average = Math.floorDiv(totalAdded,addedLinesForEveryRevision.size());
 				}
 				//--------------------------------------------------
-				arrayOfEntryOfDataset.get(i).setAVGLOCAdded(average);
-				arrayOfEntryOfDataset.get(i).setLOCAdded(totalAdded);
-				arrayOfEntryOfDataset.get(i).setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
+				arrayOfEntryOfClassDataset.get(i).setAVGLOCAdded(average);
+				arrayOfEntryOfClassDataset.get(i).setLOCAdded(totalAdded);
+				arrayOfEntryOfClassDataset.get(i).setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
 				break;
 			}
 		}
@@ -1045,7 +1063,7 @@ public class Main {
 	}
 
 	private static void writeResult() {
-		String outname = projectName + " Metrics.csv";
+		String outname = projectName + "_Class.csv";
 		//Name of CSV for output
 
 		try (FileWriter fileWriter = new FileWriter(outname)){
@@ -1056,7 +1074,7 @@ public class Main {
 					+ "NR,NFix,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,"
 					+ "Churn,MAX_Churn,AVG_Churn,ChgSetSize,MAX_ChgSet,AVG_ChgSet,Age,Weighted_Age,Buggy");
 			fileWriter.append("\n");
-			for ( LineOfDataset line : arrayOfEntryOfDataset) {
+			for ( LineOfClassDataset line : arrayOfEntryOfClassDataset) {
 
 				fileWriter.append(String.valueOf(line.getVersion()));
 				fileWriter.append(",");
@@ -1121,12 +1139,12 @@ public class Main {
 			//per ogni file ritenuto buggy da quel ticket
 			for (String file : tick.getFilenames()) {
 				//cerca la inea giusta da scrivere
-				for (i=0;i< arrayOfEntryOfDataset.size();i++) {
-					if (arrayOfEntryOfDataset.get(i).getFileName().equals(file)
-							&&(arrayOfEntryOfDataset.get(i).getVersion()<Integer.parseInt(tick.getFixedVersion()))
-							&&arrayOfEntryOfDataset.get(i).getVersion()>= predictedInjectedVersion) {
+				for (i=0;i< arrayOfEntryOfClassDataset.size();i++) {
+					if (arrayOfEntryOfClassDataset.get(i).getFileName().equals(file)
+							&&(arrayOfEntryOfClassDataset.get(i).getVersion()<Integer.parseInt(tick.getFixedVersion()))
+							&&arrayOfEntryOfClassDataset.get(i).getVersion()>= predictedInjectedVersion) {
 
-						arrayOfEntryOfDataset.get(i).setBuggy("YES");
+						arrayOfEntryOfClassDataset.get(i).setBuggy("YES");
 
 					}
 
@@ -1282,12 +1300,12 @@ public class Main {
 			//per ogni file ritenuto buggy da quel ticket
 			for (String file : tick.getFilenames()) {
 				//cerca la inea giusta da scrivere
-				for (i=0;i< arrayOfEntryOfDataset.size();i++) {
-					if (arrayOfEntryOfDataset.get(i).getFileName().equals(file)
-							&&(arrayOfEntryOfDataset.get(i).getVersion()<Integer.parseInt(tick.getFixedVersion()))
-							&&arrayOfEntryOfDataset.get(i).getVersion()>= Integer.parseInt(tick.getAffectedVersion())) {
+				for (i=0;i< arrayOfEntryOfClassDataset.size();i++) {
+					if (arrayOfEntryOfClassDataset.get(i).getFileName().equals(file)
+							&&(arrayOfEntryOfClassDataset.get(i).getVersion()<Integer.parseInt(tick.getFixedVersion()))
+							&&arrayOfEntryOfClassDataset.get(i).getVersion()>= Integer.parseInt(tick.getAffectedVersion())) {
 
-						arrayOfEntryOfDataset.get(i).setBuggy("YES");
+						arrayOfEntryOfClassDataset.get(i).setBuggy("YES");
 
 					}
 
@@ -1632,10 +1650,10 @@ public class Main {
 	public static void main(String[] args) throws IOException, JSONException {
 
 
-
+		
 		findNumberOfReleases();
 
-
+     
 		try {
 			//si fa il clone della versione odierna del progetto
 			gitClone();	
@@ -1644,58 +1662,86 @@ public class Main {
 			e.printStackTrace();
 			Thread.currentThread().interrupt();
 			System.exit(-1);
-		}		
+		}	
+		arrayOfEntryOfClassDataset= new ArrayList<>();
+		if(studyClassMetrics) {
 
-		arrayOfEntryOfDataset= new ArrayList<>();
-
-		//per ogni versione nella primà metà delle release
-		for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
-
-
-			gitCheckoutAtGivenVersion(i);
+			//per ogni versione nella primà metà delle release
+			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
 
 
-			File folder = new File(projectName);
-			filepathsOfTheCurrentRelease = new ArrayList<>();
-			chgSetSizeList=new ArrayList<>();
+				gitCheckoutAtGivenVersion(i);
 
-			//search for java files in the cloned repository
-			searchFileJava(folder, filepathsOfTheCurrentRelease);
-			System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
-			calculateMetrics(i);
-			filepathsOfTheCurrentRelease.clear();
+				File folder = new File(projectName);
+				filepathsOfTheCurrentRelease = new ArrayList<>();
+				chgSetSizeList=new ArrayList<>();
+
+				//search for java files in the cloned repository
+				searchFileJava(folder, filepathsOfTheCurrentRelease);
+				System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+
+				calculateMetrics(i);
+				filepathsOfTheCurrentRelease.clear();
+			}
+
+			//facciamo  un altro clone per poter calcolare la bugginess slla versione aggiornata del progetto
+			try {
+				//cancellazione della directory clonata del progetto (che non è aggiornata)   
+				recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
+
+				//si fa il clone della versione odierna del progetto
+				gitClone();	
+			}
+			catch (InterruptedException | IOException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+				System.exit(-1);
+			}
+			startToCalculateBugginessWithKnownAV();
+
+			startToGetFixedVersWithAV();
+			setBuggy();
+
+			//startToGetCreatedVersWithoutAV();
+			//checkFixedVersWithoutAV();
+			//setBuggyWithoutAV();		 
+
+
+			writeResult();
 		}
 
-		//facciamo  un altro clone per poter calcolare la bugginess slla versione aggiornata del progetto
-		try {
-			//cancellazione della directory clonata del progetto (che non è aggiornata)   
-			recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
+		//----------------------------------------------------------------------------
 
-			//si fa il clone della versione odierna del progetto
-			gitClone();	
+		//METHOD CLASSIFICATION
+		if(studyMethodMetrics) {
+			
+			
+			
+			
+			//per ogni versione nella primà metà delle release
+			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+				
+				gitCheckoutAtGivenVersion(i);
+						
+				File folder = new File(projectName);
+				//filepathsOfTheCurrentRelease = new ArrayList<>();
+
+				//search for java files in the cloned repository
+         
+				useFinerGitToGetCommitOfMethod(i);
+		//		searchFileJava(folder, filepathsOfTheCurrentRelease);
+			//	System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+				System.out.print("fine\n\n");
+				//calculateMetrics(i);
+				//filepathsOfTheCurrentRelease.clear();
+			}
+
+
 		}
-		catch (InterruptedException | IOException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-			System.exit(-1);
-		}
-		startToCalculateBugginessWithKnownAV();
 
-		startToGetFixedVersWithAV();
-		setBuggy();
-
-		//startToGetCreatedVersWithoutAV();
-		//checkFixedVersWithoutAV();
-		//setBuggyWithoutAV();		 
-
-
-		writeResult();
-		//cancellazione directory clonata locale del progetto   
+				//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-
-		//}
-
 		//----------------------------------------------------------------------------
 
 		////MILESTONE 2 DELIVERABLE 2
@@ -1786,4 +1832,66 @@ public class Main {
 		}
 		 */
 	}
+
+
+
+
+
+
+	private static void useFinerGitToGetCommitOfMethod(int version)  {
+
+		//directory da cui far partire il comando    
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+         
+		//java -jar FinerGit-all.jar create --src /path/to/repoA --des /path/to/repoB
+		try {
+			
+			//"E: && cd "+pathToFinerGitJar+" &&"
+			String command= "git --version ";
+			//+ "&& C:\Program Files\Java\jdk-15.0.1\bin\java.exe java -jar FinerGit-all.jar create "+ "--src "+Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+" --des "+Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+"_FinerGit";
+
+			runFinerGitCloneUntilVersion(directory,version);
+			
+
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+
+	}
+
+	//Search and list of all methods of java files in the repository at the given release
+	public static void searchMethods( final File folder, List<String> result) {
+		String fileRenamed;
+		for (final File f : folder.listFiles()) {
+
+			if (f.isDirectory()) {
+				searchFileJava(f, result);
+			}
+
+			//si prendono solo i file java
+			if (f.isFile()&&f.getName().matches(".*\\.java")) {
+
+
+				//doingCheckout of the local prefix to the file name (that depends to this program)
+
+				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
+
+				//ci si costruisce una HashMap con la data di creazione dei file java
+
+				//il comando git log prende percorsi con la '/'
+				fileRenamed= fileRenamed.replace("\\", "/");
+				result.add(fileRenamed);
+
+			}
+		}
+	}
+
+
+
+
 }

@@ -1,6 +1,6 @@
 package it.uniroma2.ing.inf.progetto;
 
-public class LineOfDataset {
+public class LineOfClassDataset {
 
 	
 	private int version;//id versione
@@ -345,7 +345,7 @@ public class LineOfDataset {
 	
 
              //costruttore minimale                                             
-	public LineOfDataset(int version, String fileName) {
+	public LineOfClassDataset(int version, String fileName) {
 		super();
 		this.version = version;
 		this.fileName = fileName;
