@@ -3,14 +3,20 @@
               Any modifications will be overwritten.
               To include a user specific buildfile here, simply create one in the same
               directory with the processing instruction <?eclipse.ant.import?>
-              as the first entry and export the buildfile again. --><project basedir="." default="build" name="Project Thesis">
+              as the first entry and export the buildfile again. --><project basedir="." default="build" name="Project_Thesis">
     <property environment="env"/>
-    <property name="ECLIPSE_HOME" value="../eclipse/"/>
+    <property name="ECLIPSE_HOME" value="../"/>
     <property name="debuglevel" value="source,lines,vars"/>
-    <property name="target" value="1.8"/>
-    <property name="source" value="1.8"/>
-    <path id="Project Thesis.classpath">
+    <property name="target" value="10"/>
+    <property name="source" value="10"/>
+    <path id="Project_Thesis.classpath">
         <pathelement location="bin"/>
+        <pathelement location="../../WEKA/Weka-3-8-4/smote-1.0.3.jar/smote-1.0.3.jar"/>
+        <pathelement location="../../WEKA/Weka-3-8-4/weka.jar"/>
+        <pathelement location="../../Java/jdk1.8.0_141/lib/java-json.jar"/>
+    </path>
+    <path id="run.Main (13).classpath">
+        <path refid="Project_Thesis.classpath"/>
         <pathelement location="../../WEKA/Weka-3-8-4/smote-1.0.3.jar/smote-1.0.3.jar"/>
         <pathelement location="../../WEKA/Weka-3-8-4/weka.jar"/>
         <pathelement location="../../Java/jdk1.8.0_141/lib/java-json.jar"/>
@@ -33,7 +39,7 @@
         <echo message="${ant.project.name}: ${ant.file}"/>
         <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
             <src path="src"/>
-            <classpath refid="Project Thesis.classpath"/>
+            <classpath refid="Project_Thesis.classpath"/>
         </javac>
     </target>
     <target description="Build all projects which reference this project. Useful to propagate changes." name="build-refprojects"/>
@@ -52,7 +58,7 @@
     </target>
     <target name="Main (13)">
         <java classname="it.uniroma2.ing.inf.progetto.Main" failonerror="true" fork="yes">
-            <classpath refid="Project Thesis.classpath"/>
+            <classpath refid="run.Main (13).classpath"/>
         </java>
     </target>
 </project>
