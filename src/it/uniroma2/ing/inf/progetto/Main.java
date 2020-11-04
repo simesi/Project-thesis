@@ -11,18 +11,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import weka.knowledgeflow.steps.SetPropertiesFromEnvironment;
-
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,7 +64,9 @@ public class Main {
 	public static List<LocalDateTime> releases;
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
 	private static List<String> filepathsOfTheCurrentRelease;
+	private static List<String> fileMethodsOfTheCurrentRelease;
 	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
+	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
@@ -99,11 +96,14 @@ public class Main {
 	private static final String FORMAT_DATE= "yyyy-MM-dd";
 	private static final String RELEASE_DATE="releaseDate";
 	private static final int YEARS_INTERVAL=14;
-	private static final String pathToFinerGitJar="E:\\FinerGit\\FinerGit\\build\\libs";
-	private static final String PATH_TO_BATCH_FILE="E:\\Programmi\\Eclipse\\Project_Thesis\\execFinGit.bat";
+	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
+	private static final String FINER_GIT="_FinerGit_";
 
 	private static boolean studyMethodMetrics=true; //calcola solo le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola solo le metriche di classe
+
+	private static boolean calculatingMethodHistories=false;
+
 	//--------------------------
 
 
@@ -198,13 +198,24 @@ public class Main {
 		runProcAndWait(pb);
 
 	}
-	
-	//questo metodo esegue un file batch incaricato di produrre la directory prodotta da FinerGit della repository
-	public static void runFinerGitCloneUntilVersion(Path directory,int version) throws IOException, InterruptedException {
 
-		ProcessBuilder pb = new ProcessBuilder(PATH_TO_BATCH_FILE,directory.toString(),String.valueOf(version));	
-		
-		runProcAndWait(pb);
+	//questo metodo esegue FinerGit incaricato di produrre una directory con i metodi della repository
+	public static void runFinerGitCloneForVersion(Path project,int version) {
+
+
+		//java -jar FinerGit-all.jar create --src /path/to/repoA --des /path/to/repoB
+		ProcessBuilder pb = new ProcessBuilder("cmd.exe","/c", "cd "+PATH_TO_FINER_GIT_JAR+ " && "
+				+ "java -jar FinerGit-all.jar create --src "+project.toString()+" --des "+project.toString()+"_FinerGit_"+version);	
+
+		try {
+			runProcAndWait(pb);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 
 	}
 
@@ -232,7 +243,7 @@ public class Main {
 
 				while ((line = br.readLine()) != null) {
 
-					
+
 					if (doingCheckout) {
 						doingCheckout=false;
 						gitCheckoutAtGivenCommit(line,br);
@@ -266,6 +277,9 @@ public class Main {
 					else if (calculatingChgSetSizePhaseTwo) {
 						getFileCommittedTogheter(line,br);
 					}
+					else if (calculatingMethodHistories) {
+						getFirstHalfMethodsMetrics(line,br);
+					}
 					else {
 						System.out.println(line);
 					}
@@ -274,9 +288,119 @@ public class Main {
 			} catch (IOException ioe) {
 
 				ioe.printStackTrace();
-
+				System.exit(-1);
 			}
 
+		}
+
+		private void getFirstHalfMethodsMetrics(String line, BufferedReader br) {
+			String version;
+			int numOfCommits=0;
+			String nextLine;
+			int addedLines=0;
+			int deletedLines=0;
+			String methodName="";
+			int realAddedLinesOfCommit=0;
+			int sumOfRealDeletedLOC=0;
+			int realDeletedLOC=0;
+			int maxAddedlines=0;
+			int realAddedLinesOverCommit=0;
+			int maxChurn=0;
+			int avgChurn=0;
+			int modified=0;
+			int totalAdded=0;
+			int average=0;
+			ArrayList<Integer> realAddedLinesOverCommits=new ArrayList<>();
+
+
+			line=line.trim();
+			//"one or more whitespaces = \\s+"
+			String[] tokens = line.split("\\s+");
+
+			//operazioni per il primo output che è il numero di versione------------------------------
+			version=tokens[0];
+			//---------------------------------------------------------------------- 
+			try {
+				//lettura prox riga					      					      
+				nextLine =br.readLine();
+
+				while (nextLine != null) {
+					numOfCommits++;
+					nextLine=nextLine.trim();
+					tokens=nextLine.split("\\s+");
+
+					//discard of modified lines
+					realAddedLinesOfCommit = Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
+
+					//per il Max_LOC_Added
+					maxAddedlines=Math.max(realAddedLinesOfCommit, maxAddedlines);
+
+
+					//solo se le righe inserite sono maggiori di quelle cancellate
+					if(realAddedLinesOfCommit>0) {
+						//per AVG_LOC_Added
+						realAddedLinesOverCommits.add(realAddedLinesOfCommit);
+					}
+					//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
+					addedLines=addedLines+Integer.parseInt(tokens[0]);
+					//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
+					deletedLines=deletedLines+Integer.parseInt(tokens[1]);
+					methodName=tokens[2];
+
+					//per CHURN (togliamo i commit che hanno solo modificato il codice e quindi risultano +1 sia in linee aggiunte che in quelle eliminate)
+					if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
+						realDeletedLOC=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+						sumOfRealDeletedLOC= sumOfRealDeletedLOC + realDeletedLOC;
+					}
+					else {
+						realDeletedLOC=0;
+					}
+					//per MAX_CHURN
+					maxChurn=Math.max(realAddedLinesOfCommit, maxChurn);
+
+					realAddedLinesOfCommit=0;
+
+					nextLine =br.readLine();
+				}
+
+				if(numOfCommits==0) {
+					avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
+				}
+				//provato empiricamente...
+				modified= deletedLines-sumOfRealDeletedLOC;
+
+
+
+				LineOfMethodDataset lineOfMethod = new LineOfMethodDataset(Integer.parseInt(version), methodName);
+
+				lineOfMethod.setMethodHistories(numOfCommits);
+				lineOfMethod.setMaxStmtAdded(maxAddedlines);
+				
+				lineOfMethod.setChurn(Math.max(addedLines-deletedLines, 0));
+				lineOfMethod.setMaxChurn(maxChurn);
+				lineOfMethod.setAvgChurn(avgChurn);
+
+				//calcolo AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
+				for(int n=0; n<realAddedLinesOverCommits.size(); n++){
+
+					totalAdded = totalAdded + realAddedLinesOverCommits.get(n);
+
+				}
+				if (totalAdded>0) {
+					 average = Math.floorDiv(totalAdded,realAddedLinesOverCommits.size());
+				}
+				//--------------------------------------------------
+				lineOfMethod.setAvgStmtAdded(average);
+				lineOfMethod.setStmtAdded(totalAdded);
+				//lineOfMethod.setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
+				
+
+				arrayOfEntryOfMethodDataset.add(lineOfMethod);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} 
 		}
 
 		//per ogni commit si chiamerà questo metodo che ritorna i pathname dei file committati
@@ -904,6 +1028,33 @@ public class Main {
 		}
 	}
 
+	//Search and list of all file java in the repository at the given release
+	public static void searchMethodsJava( final File folder, List<String> result) {
+		String fileRenamed;
+		for (final File f : folder.listFiles()) {
+
+			if (f.isDirectory()) {
+				searchFileJava(f, result);
+			}
+
+			//si prendono solo i file java
+			if (f.isFile()&&f.getName().matches(".*\\.mjava")) {
+
+
+				//doingCheckout of the local prefix to the file name (that depends to this program)
+
+				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
+
+				//ci si costruisce una lista di classi java
+
+				//il comando git log prende percorsi con la '/'
+				fileRenamed= fileRenamed.replace("\\", "/");
+				result.add(fileRenamed);
+
+			}
+		}
+	}
+
 
 	//data una versione/release e un filename si ricava il LOC/size del file
 	private static void getLOCMetric(String filename, Integer i) {
@@ -997,6 +1148,42 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
+
+	private static void getFirstHalfMethodMetrics(String filename, Integer version) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName+FINER_GIT+version);
+		String command;
+
+		try {    
+
+			if(version>1) {
+
+				//ritorna release, righe aggiunte, elimiante e nome del metodo
+				command = ECHO+version+" && git log --follow "
+						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+filename;	
+			}
+			else{
+				command = ECHO+version+" && git log --follow "+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+filename;	
+
+			}
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+
+	}
+
+
 
 	//metodo che computa P per la versione passata in ingresso con il metodo incrementale come "average among the defects fixed in previous versions"
 	private static int computeP(int i) {
@@ -1650,10 +1837,10 @@ public class Main {
 	public static void main(String[] args) throws IOException, JSONException {
 
 
-		
+
 		findNumberOfReleases();
 
-     
+
 		try {
 			//si fa il clone della versione odierna del progetto
 			gitClone();	
@@ -1663,9 +1850,13 @@ public class Main {
 			Thread.currentThread().interrupt();
 			System.exit(-1);
 		}	
-		arrayOfEntryOfClassDataset= new ArrayList<>();
+
+		//----------------------------------------------------------------------------
+
+		//CLASS CLASSIFICATION
 		if(studyClassMetrics) {
 
+			arrayOfEntryOfClassDataset= new ArrayList<>();
 			//per ogni versione nella primà metà delle release
 			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
 
@@ -1715,32 +1906,39 @@ public class Main {
 
 		//METHOD CLASSIFICATION
 		if(studyMethodMetrics) {
-			
-			
-			
-			
+
+
+
+			fileMethodsOfTheCurrentRelease = new ArrayList<>();
+			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
+
 			//per ogni versione nella primà metà delle release
 			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
-				
-				gitCheckoutAtGivenVersion(i);
-						
-				File folder = new File(projectName);
-				//filepathsOfTheCurrentRelease = new ArrayList<>();
 
-				//search for java files in the cloned repository
-         
-				useFinerGitToGetCommitOfMethod(i);
-		//		searchFileJava(folder, filepathsOfTheCurrentRelease);
-			//	System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
-				System.out.print("fine\n\n");
-				//calculateMetrics(i);
-				//filepathsOfTheCurrentRelease.clear();
+				gitCheckoutAtGivenVersion(i);
+
+				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+
+
+				//create repository with FinerGit------------------------------
+				//runFinerGitCloneForVersion(directory,i); //levare commento per produrre i file metodo
+				//-------------------------------------------------------------
+
+
+				//search for java methods in the cloned repository         
+				File folder = new File(projectName+"_FinerGit_"+i);
+				searchMethods(folder, fileMethodsOfTheCurrentRelease);
+				//	System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+
+				calculateMethodsMetrics(i);
+
+				fileMethodsOfTheCurrentRelease.clear();
 			}
 
 
 		}
 
-				//cancellazione directory clonata locale del progetto   
+		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 		//----------------------------------------------------------------------------
 
@@ -1837,31 +2035,16 @@ public class Main {
 
 
 
+	private static void calculateMethodsMetrics(int version) {
 
-	private static void useFinerGitToGetCommitOfMethod(int version)  {
+		//per ogni metodo nella release (version)
+		for (String method : fileMethodsOfTheCurrentRelease) {
 
-		//directory da cui far partire il comando    
-		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-         
-		//java -jar FinerGit-all.jar create --src /path/to/repoA --des /path/to/repoB
-		try {
-			
-			//"E: && cd "+pathToFinerGitJar+" &&"
-			String command= "git --version ";
-			//+ "&& C:\Program Files\Java\jdk-15.0.1\bin\java.exe java -jar FinerGit-all.jar create "+ "--src "+Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+" --des "+Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+"_FinerGit";
-
-			runFinerGitCloneUntilVersion(directory,version);
-			
-
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
+			calculatingMethodHistories = true;
+			//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
+			getFirstHalfMethodMetrics(method,version);
+			calculatingMethodHistories = false;
 		}
-
 	}
 
 	//Search and list of all methods of java files in the repository at the given release
@@ -1870,18 +2053,18 @@ public class Main {
 		for (final File f : folder.listFiles()) {
 
 			if (f.isDirectory()) {
-				searchFileJava(f, result);
+				searchMethods(f, result);
 			}
 
 			//si prendono solo i file java
-			if (f.isFile()&&f.getName().matches(".*\\.java")) {
+			if (f.isFile()&&f.getName().matches(".*\\.mjava")) {
 
 
 				//doingCheckout of the local prefix to the file name (that depends to this program)
 
 				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
 
-				//ci si costruisce una HashMap con la data di creazione dei file java
+				//ci si costruisce una lista 
 
 				//il comando git log prende percorsi con la '/'
 				fileRenamed= fileRenamed.replace("\\", "/");
