@@ -393,7 +393,7 @@ public class Main {
 				lineOfMethod.setAvgStmtAdded(average);
 				lineOfMethod.setStmtAdded(totalAdded);
 				//lineOfMethod.setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
-				
+				System.out.println(lineOfMethod.getMethod()+" "+lineOfMethod.getMethodHistories());
 
 				arrayOfEntryOfMethodDataset.add(lineOfMethod);
 
@@ -1931,7 +1931,7 @@ public class Main {
 				//	System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
 				calculateMethodsMetrics(i);
-
+                  System.out.println("Calculated metrics version "+i);
 				fileMethodsOfTheCurrentRelease.clear();
 			}
 
