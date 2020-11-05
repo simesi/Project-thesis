@@ -392,7 +392,7 @@ public class Main {
 				//--------------------------------------------------
 				lineOfMethod.setAvgStmtAdded(average);
 				lineOfMethod.setStmtAdded(totalAdded);
-				//lineOfMethod.setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
+				lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
 				System.out.println(lineOfMethod.getMethod()+" "+lineOfMethod.getMethodHistories());
 
 				arrayOfEntryOfMethodDataset.add(lineOfMethod);
