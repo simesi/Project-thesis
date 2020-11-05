@@ -230,6 +230,22 @@ public class LineOfMethodDataset {
 		super();
 		this.version = version;
 		this.method = method;
+		this.authors=0;
+		this.avgChurn=0;
+		this.avgStmtAdded=0;
+		this.avgStmtDeleted=0;
+		this.churn=0;
+		this.cond=0;
+		this.decl=0;
+		this.elseAdded=0;
+		this.elseDeleted=0;
+		this.maxChurn=0;
+		this.maxStmtAdded=0;
+		this.maxStmtDeleted=0;
+		this.methodHistories=0;
+		this.stmtAdded=0;
+		this.avgStmtDeleted=0;
+		
 	}
 	
 	

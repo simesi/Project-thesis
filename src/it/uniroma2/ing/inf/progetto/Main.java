@@ -304,12 +304,12 @@ public class Main {
 			int sumOfRealDeletedLOC=0;
 			int realDeletedLOC=0;
 			int maxAddedlines=0;
-			int realAddedLinesOverCommit;
 			int maxChurn=0;
 			int avgChurn=0;
 			int maxDeletedLines=0;
 			int totalAdded=0;
 			int average=0;
+			int numOfCommitsWithDel=0;
 			ArrayList<Integer> realAddedLinesOverCommits=new ArrayList<>();
 
 
@@ -341,6 +341,8 @@ public class Main {
 						//per AVG_LOC_Added
 						realAddedLinesOverCommits.add(realAddedLinesOfCommit);
 					}
+				
+					
 					//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
 					addedLines=addedLines+Integer.parseInt(tokens[0]);
 					//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
@@ -350,15 +352,15 @@ public class Main {
 					//per CHURN (togliamo i commit che hanno solo modificato il codice e quindi risultano +1 sia in linee aggiunte che in quelle eliminate)
 					if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
 						realDeletedLOC=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+						numOfCommitsWithDel++;
 						sumOfRealDeletedLOC= sumOfRealDeletedLOC + realDeletedLOC;
 						maxDeletedLines=Math.max(realDeletedLOC, maxDeletedLines);
 					}
-					else {
-						realDeletedLOC=0;
-					}
+					
 					//per MAX_CHURN
 					maxChurn=Math.max(realAddedLinesOfCommit, maxChurn);
-
+					
+					realDeletedLOC=0;
 					realAddedLinesOfCommit=0;
 
 					nextLine =br.readLine();
@@ -368,9 +370,6 @@ public class Main {
 					avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
 				}
 				
-
-
-
 				LineOfMethodDataset lineOfMethod = new LineOfMethodDataset(Integer.parseInt(version), methodName);
 
 				lineOfMethod.setMethodHistories(numOfCommits);
@@ -389,12 +388,19 @@ public class Main {
 				if (totalAdded>0) {
 					 average = Math.floorDiv(totalAdded,realAddedLinesOverCommits.size());
 				}
+				
+				
+				
 				//--------------------------------------------------
 				lineOfMethod.setAvgStmtAdded(average);  
 				lineOfMethod.setStmtAdded(totalAdded);
 				lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
 				lineOfMethod.setMaxStmtDeleted(maxDeletedLines);
-				System.out.println(lineOfMethod.getMethod()+" "+lineOfMethod.getMethodHistories());
+				
+				if (numOfCommitsWithDel>0) {
+				lineOfMethod.setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
+				}
+				System.out.println(lineOfMethod.getMethod());
 
 				arrayOfEntryOfMethodDataset.add(lineOfMethod);
 
