@@ -304,10 +304,10 @@ public class Main {
 			int sumOfRealDeletedLOC=0;
 			int realDeletedLOC=0;
 			int maxAddedlines=0;
-			int realAddedLinesOverCommit=0;
+			int realAddedLinesOverCommit;
 			int maxChurn=0;
 			int avgChurn=0;
-			int modified=0;
+			int maxDeletedLines=0;
 			int totalAdded=0;
 			int average=0;
 			ArrayList<Integer> realAddedLinesOverCommits=new ArrayList<>();
@@ -351,6 +351,7 @@ public class Main {
 					if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
 						realDeletedLOC=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
 						sumOfRealDeletedLOC= sumOfRealDeletedLOC + realDeletedLOC;
+						maxDeletedLines=Math.max(realDeletedLOC, maxDeletedLines);
 					}
 					else {
 						realDeletedLOC=0;
@@ -366,8 +367,7 @@ public class Main {
 				if(numOfCommits==0) {
 					avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
 				}
-				//provato empiricamente...
-				modified= deletedLines-sumOfRealDeletedLOC;
+				
 
 
 
@@ -393,6 +393,7 @@ public class Main {
 				lineOfMethod.setAvgStmtAdded(average);
 				lineOfMethod.setStmtAdded(totalAdded);
 				lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
+				lineOfMethod.setMaxStmtDeleted(maxDeletedLines);
 				System.out.println(lineOfMethod.getMethod()+" "+lineOfMethod.getMethodHistories());
 
 				arrayOfEntryOfMethodDataset.add(lineOfMethod);
