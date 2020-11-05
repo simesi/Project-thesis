@@ -390,7 +390,7 @@ public class Main {
 					 average = Math.floorDiv(totalAdded,realAddedLinesOverCommits.size());
 				}
 				//--------------------------------------------------
-				lineOfMethod.setAvgStmtAdded(average);
+				lineOfMethod.setAvgStmtAdded(average); 
 				lineOfMethod.setStmtAdded(totalAdded);
 				lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
 				lineOfMethod.setMaxStmtDeleted(maxDeletedLines);
