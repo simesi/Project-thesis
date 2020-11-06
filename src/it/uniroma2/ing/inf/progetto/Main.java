@@ -102,7 +102,8 @@ public class Main {
 	private static boolean studyMethodMetrics=true; //calcola solo le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola solo le metriche di classe
 
-	private static boolean calculatingMethodHistories=false;
+	private static boolean calculatingStmtMetrics=false;
+	private static boolean calculatingElseMetrics=false;
 
 	//--------------------------
 
@@ -277,7 +278,7 @@ public class Main {
 					else if (calculatingChgSetSizePhaseTwo) {
 						getFileCommittedTogheter(line,br);
 					}
-					else if (calculatingMethodHistories) {
+					else if (calculatingStmtMetrics) {
 						getFirstHalfMethodsMetrics(line,br);
 					}
 					else {
@@ -1156,6 +1157,45 @@ public class Main {
 		}
 	}
 
+	
+	private static void getElseMetrics(String method, Integer version) {
+		//directory da cui far partire il comando git    
+				Path directory = Paths.get(new File("").getAbsolutePath()+
+						SLASH+projectName+FINER_GIT+version);
+				String command;
+
+				//per vedere solo i cambiamenti avvenuti nella storia con una data parola modificata/aggiunta/eliminata nel codice
+				//git whatchanged --since="1 year ago" -p -S "word" -- file.java
+				
+				try {    
+
+					if(version>1) {
+
+						//ritorna release, righe aggiunte, elimiante e nome del metodo
+						command = ECHO+version+" && git log --follow "
+								+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
+								"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+								" -S"+" else"+FORMATNUMSTAT+method;	
+					}
+					else{
+						command = ECHO+version+" && git log --follow "+ 
+								"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+								" -S"+" else"+FORMATNUMSTAT+method;	
+
+					}
+
+					runCommandOnShell(directory, command);
+
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.exit(-1);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					Thread.currentThread().interrupt();
+				}
+	}
+	
+	
 	private static void getFirstHalfMethodMetrics(String filename, Integer version) {
 
 		//directory da cui far partire il comando git    
@@ -2047,10 +2087,14 @@ public class Main {
 		//per ogni metodo nella release (version)
 		for (String method : fileMethodsOfTheCurrentRelease) {
 
-			calculatingMethodHistories = true;
+			calculatingStmtMetrics = true;
 			//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
 			getFirstHalfMethodMetrics(method,version);
-			calculatingMethodHistories = false;
+			calculatingStmtMetrics = false;
+			
+			calculatingElseMetrics=true;
+			getElseMetrics(method,version);
+			calculatingElseMetrics=false;
 		}
 	}
 
