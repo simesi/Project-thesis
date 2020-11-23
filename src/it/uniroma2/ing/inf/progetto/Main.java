@@ -105,6 +105,7 @@ public class Main {
 	private static boolean calculatingStmtMetricsMethodLevel=false;
 	private static boolean calculatingElseMetricsMethodLevel=false;
 	private static boolean calculatingCondMetricMethodLevel=false;
+	private static boolean calculatingAuthMetricMethodLevel=false;
 
 	//--------------------------
 
@@ -288,7 +289,11 @@ public class Main {
 					else if(calculatingCondMetricMethodLevel) {
 						getCondMetricAtMethodLevel(line,br);
 					}
+					else if(calculatingAuthMetricMethodLevel) {
+						getAuthMetricAtMethodLevel(line,br);
+					}
 					else {
+
 						System.out.println(line);
 					}
 				}
@@ -300,6 +305,48 @@ public class Main {
 			}
 
 		}
+
+		private void getAuthMetricAtMethodLevel(String line, BufferedReader br) {
+			String nextLine;
+			int version;
+			String method = "";
+			int nAuth=0;
+			
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+
+			version=Integer.parseInt(tokens[0]);
+			method=tokens[1];
+
+			try {
+				nextLine =br.readLine();
+
+
+				while(nextLine != null) {
+					nAuth++;
+					nextLine =br.readLine();
+				}
+
+				if (nAuth!=0) {
+					//cerchiamo l'oggetto giusto su cui scrivere
+					for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) { 
+						if((arrayOfEntryOfMethodDataset.get(i).getVersion()==(version))&& 
+								arrayOfEntryOfMethodDataset.get(i).getMethod().equals(method)) {
+							arrayOfEntryOfMethodDataset.get(i).setAuthors(nAuth);
+							break;
+						}
+
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} 
+
+		}
+
+
+
 
 		private void getCondMetricAtMethodLevel(String line, BufferedReader br) {
 			String nextLine;
@@ -342,20 +389,20 @@ public class Main {
 					nextLine =br.readLine();
 				}
 
-				
-					//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-					for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) {  
-						if((arrayOfEntryOfMethodDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-								arrayOfEntryOfMethodDataset.get(i).getMethod().equals(filename)) {				
-							sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseAdded();
-							sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseDeleted();
-							sumOfModifiedCondition+=countIfAdded;
-							sumOfModifiedCondition+=countIfDeleted;
-							arrayOfEntryOfMethodDataset.get(i).setCond(sumOfModifiedCondition);
-							break;
-						}
+
+				//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
+				for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) {  
+					if((arrayOfEntryOfMethodDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+							arrayOfEntryOfMethodDataset.get(i).getMethod().equals(filename)) {				
+						sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseAdded();
+						sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseDeleted();
+						sumOfModifiedCondition+=countIfAdded;
+						sumOfModifiedCondition+=countIfDeleted;
+						arrayOfEntryOfMethodDataset.get(i).setCond(sumOfModifiedCondition);
+						break;
 					}
-				
+				}
+
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(-1);
@@ -1285,7 +1332,28 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
+	private static void getNumberOfAuthorsOfMetod(String method, Integer version) {
 
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName+FINER_GIT+version);
+		String command;
+
+		try {
+
+			command = ECHO+version+" "+method+" && git shortlog -sn --all --until="
+					+fromReleaseIndexToDate.get(String.valueOf(version))+" "+method;	
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
 	private static void getCondMetric(String method, Integer version) {
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -2266,6 +2334,10 @@ public class Main {
 			calculatingCondMetricMethodLevel=true;
 			getCondMetric(method,version);
 			calculatingCondMetricMethodLevel=false;
+			
+			calculatingAuthMetricMethodLevel=true;
+			getNumberOfAuthorsOfMetod( method,version);
+			calculatingAuthMetricMethodLevel=false;
 		}
 	}
 
