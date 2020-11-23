@@ -329,10 +329,12 @@ public class Main {
 
 				if (nAuth!=0) {
 					//cerchiamo l'oggetto giusto su cui scrivere
-					for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) { 
+					for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) { 
 						if((arrayOfEntryOfMethodDataset.get(i).getVersion()==(version))&& 
 								arrayOfEntryOfMethodDataset.get(i).getMethod().equals(method)) {
 							arrayOfEntryOfMethodDataset.get(i).setAuthors(nAuth);
+							
+							System.out.print("Metodo: "+method+ " NumAuth: "+nAuth);
 							break;
 						}
 
@@ -577,8 +579,6 @@ public class Main {
 				if (numOfCommitsWithDel>0) {
 					lineOfMethod.setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
 				}
-				System.out.println(lineOfMethod.getMethod());
-
 				arrayOfEntryOfMethodDataset.add(lineOfMethod);
 
 			} catch (IOException e) {
@@ -1212,33 +1212,7 @@ public class Main {
 		}
 	}
 
-	//Search and list of all file java in the repository at the given release
-	public static void searchMethodsJava( final File folder, List<String> result) {
-		String fileRenamed;
-		for (final File f : folder.listFiles()) {
-
-			if (f.isDirectory()) {
-				searchFileJava(f, result);
-			}
-
-			//si prendono solo i file java
-			if (f.isFile()&&f.getName().matches(".*\\.mjava")) {
-
-
-				//doingCheckout of the local prefix to the file name (that depends to this program)
-
-				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
-
-				//ci si costruisce una lista di classi java
-
-				//il comando git log prende percorsi con la '/'
-				fileRenamed= fileRenamed.replace("\\", "/");
-				result.add(fileRenamed);
-
-			}
-		}
-	}
-
+	
 
 	//data una versione/release e un filename si ricava il LOC/size del file
 	private static void getLOCMetric(String filename, Integer i) {
@@ -1341,8 +1315,8 @@ public class Main {
 
 		try {
 
-			command = ECHO+version+" "+method+" && git shortlog -sn --all --until="
-					+fromReleaseIndexToDate.get(String.valueOf(version))+" "+method;	
+			command = ECHO+version+" \""+method+"\" && git shortlog -sn --all --until="
+					+fromReleaseIndexToDate.get(String.valueOf(version))+" \""+method+"\"";	
 
 			runCommandOnShell(directory, command);
 
@@ -1368,15 +1342,15 @@ public class Main {
 			if(version>1) {
 
 				//ritorna release,nome del metodo e storico cambiamenti
-				command = ECHO+version+" && "+ECHO+method+" && git log --follow -p"
+				command = ECHO+version+" && "+ECHO+"\""+method+"\" && git log --follow -p "
 						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
-						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
-						" -G"+" if --"+method;	
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+						" -G"+" if -- \""+method+"\"";	
 			}
 			else{
-				command = ECHO+version+" && "+ECHO+method+" && git log --follow -p"+ 
+				command = ECHO+version+" && "+ECHO+"\""+method+"\" && git log --follow -p "+ 
 						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
-						" -G"+" if --"+method;	
+						" -G"+" if -- \""+method+"\"";	
 
 			}
 
@@ -1407,16 +1381,16 @@ public class Main {
 			if(version>1) {
 
 				//ritorna release,nome del metodo e storico cambiamenti
-				command = ECHO+version+" && "+ECHO+method+" && git log --follow -p"
+				command = ECHO+version+" && "+ECHO+"\""+method+"\" && git log --follow -p "
 						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
-						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
-						" -S"+" else --"+method;	
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+						" -S"+" else -- \""+method+"\"";
 			}
 			else{
-				command = ECHO+version+" && "+ECHO+method+" && git log --follow -p"+ 
-						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
-						" -S"+" else --"+method;	
-
+				command = ECHO+version+" && "+ECHO+"\""+method+"\" && git log --follow -p "+ 
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+						" -S"+" else -- \""+method+"\"";	
+				
 			}
 
 			runCommandOnShell(directory, command);
@@ -1445,7 +1419,7 @@ public class Main {
 				//ritorna release, righe aggiunte, elimiante e nome del metodo
 				command = ECHO+version+" && git log --follow "
 						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
-						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+filename;	
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+filename;	
 			}
 			else{
 				command = ECHO+version+" && git log --follow "+ 
@@ -1531,7 +1505,7 @@ public class Main {
 
 	}
 
-	private static void writeResult() {
+	private static void writeClassMetricsResult() {
 		String outname = projectName + "_Class.csv";
 		//Name of CSV for output
 
@@ -2181,7 +2155,7 @@ public class Main {
 			//setBuggyWithoutAV();		 
 
 
-			writeResult();
+			writeClassMetricsResult();
 		}
 
 		//----------------------------------------------------------------------------
@@ -2209,7 +2183,7 @@ public class Main {
 
 				//search for java methods in the cloned repository         
 				File folder = new File(projectName+"_FinerGit_"+i);
-				searchMethods(folder, fileMethodsOfTheCurrentRelease);
+				searchMethods(folder, fileMethodsOfTheCurrentRelease,i);
 				//	System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
 				calculateMethodsMetrics(i);
@@ -2217,7 +2191,10 @@ public class Main {
 				fileMethodsOfTheCurrentRelease.clear();
 			}
 
-
+			writeMethodMetricsResult();
+			
+			
+			
 		}
 
 		//cancellazione directory clonata locale del progetto   
@@ -2321,7 +2298,7 @@ public class Main {
 
 		//per ogni metodo nella release (version)
 		for (String method : fileMethodsOfTheCurrentRelease) {
-
+              System.out.println("Inizio a calcolare metriche per: "+method);
 			calculatingStmtMetricsMethodLevel = true;
 			//il metodo getFirstHalfMethodMetrics() creerà anche l'arrayList di entry LineOfMethodDataset
 			getFirstHalfMethodMetrics(method,version);
@@ -2342,12 +2319,12 @@ public class Main {
 	}
 
 	//Search and list of all methods of java files in the repository at the given release
-	public static void searchMethods( final File folder, List<String> result) {
+	public static void searchMethods( final File folder, List<String> result, int version) {
 		String fileRenamed;
 		for (final File f : folder.listFiles()) {
 
 			if (f.isDirectory()) {
-				searchMethods(f, result);
+				searchMethods(f, result,version);
 			}
 
 			//si prendono solo i file java
@@ -2356,19 +2333,81 @@ public class Main {
 
 				//doingCheckout of the local prefix to the file name (that depends to this program)
 
-				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
+				fileRenamed=f.getAbsolutePath();
+				//System.out.println(fileRenamed);
+				//System.out.println((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString());
+				
+				fileRenamed=fileRenamed.replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName+FINER_GIT+version)+SLASH).toString(), "");
 
 				//ci si costruisce una lista 
 
 				//il comando git log prende percorsi con la '/'
 				fileRenamed= fileRenamed.replace("\\", "/");
 				result.add(fileRenamed);
+				//System.out.println(fileRenamed);
 
 			}
 		}
 	}
 
+	private static void writeMethodMetricsResult() {
+		String outname = projectName + "_Method.csv";
+		//Name of CSV for output
 
+		try (FileWriter fileWriter = new FileWriter(outname)){
+
+
+
+			fileWriter.append("Project,Version,Method,methodHistories,authors,"
+					+ "stmtAdded,maxStmtAdded,avgStmtAdded,stmtDeleted,maxStmtDeleted,"
+					+ "avgStmtDeleted,Churn,MaxChurn,AvgChurn,cond,elseAdded,elseDeleted,Predicted Defective");
+			fileWriter.append("\n");
+			for ( LineOfMethodDataset line : arrayOfEntryOfMethodDataset) {
+
+				fileWriter.append(projectName);
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getVersion()));
+				fileWriter.append(",");
+				fileWriter.append(line.getMethod());
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getMethodHistories()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getAuthors()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getStmtAdded()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getMaxStmtAdded()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getAvgStmtAdded()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getStmtDeleted()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getMaxStmtDeleted()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getAvgStmtDeleted()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getChurn()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getMaxChurn()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getAvgChurn()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getCond()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getElseAdded()));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(line.getElseDeleted()));
+				fileWriter.append(",");
+				fileWriter.append(line.getDefective());
+				fileWriter.append("\n");
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
+	}
 
 
 }
