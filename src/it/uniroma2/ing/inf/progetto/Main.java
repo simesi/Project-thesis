@@ -285,6 +285,9 @@ public class Main {
 					else if (calculatingElseMetricsMethodLevel) {
 						getElseMetricsAtMethodLevel(line,br);
 					}
+					else if(calculatingCondMetricMethodLevel) {
+						getCondMetricAtMethodLevel(line,br);
+					}
 					else {
 						System.out.println(line);
 					}
@@ -297,6 +300,69 @@ public class Main {
 			}
 
 		}
+
+		private void getCondMetricAtMethodLevel(String line, BufferedReader br) {
+			String nextLine;
+			String version;
+			String filename;
+			String ifString="if";
+			int countIfAdded=0;
+			int countIfDeleted=0;
+			int sumOfModifiedCondition=0;
+
+
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+			//il primo input è la versione	
+			version= tokens[0];
+
+
+			try {
+				//la seconda riga ci ritorna la segnatura del metodo
+				nextLine =br.readLine();
+
+				nextLine=nextLine.trim();
+				tokens = nextLine.split("\\s+");
+				filename= tokens[0];
+
+				//dalla terza riga in poi otteniamo le modifiche apportate (da filtrare) 
+				nextLine =br.readLine();
+
+
+				while(nextLine != null) {
+
+					nextLine=nextLine.trim();
+					tokens=nextLine.split("\\s+");
+					if (tokens[0].equals("+"+ifString)){
+						countIfAdded++;
+					}
+					else if(tokens[0].equals("-"+ifString)) {
+						countIfDeleted++;
+					}
+					nextLine =br.readLine();
+				}
+
+				
+					//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
+					for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) {  
+						if((arrayOfEntryOfMethodDataset.get(i).getVersion()==Integer.parseInt(version))&& 
+								arrayOfEntryOfMethodDataset.get(i).getMethod().equals(filename)) {				
+							sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseAdded();
+							sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseDeleted();
+							sumOfModifiedCondition+=countIfAdded;
+							sumOfModifiedCondition+=countIfDeleted;
+							arrayOfEntryOfMethodDataset.get(i).setCond(sumOfModifiedCondition);
+							break;
+						}
+					}
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} 
+
+		}
+
 
 		private void getElseMetricsAtMethodLevel(String line, BufferedReader br) {
 			String nextLine;
@@ -1220,6 +1286,44 @@ public class Main {
 		}
 	}
 
+	private static void getCondMetric(String method, Integer version) {
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName+FINER_GIT+version);
+		String command;
+
+		//per vedere tutti i cambiamenti avvenuti nella storia che hanno aggiunto/eliminato/modificato righe contenenti una data parola nel codice
+		//git log --since="..." -p -G "word" -- file.java
+
+		try {    
+
+			if(version>1) {
+
+				//ritorna release,nome del metodo e storico cambiamenti
+				command = ECHO+version+" && "+ECHO+method+" && git log --follow -p"
+						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+						" -G"+" if --"+method;	
+			}
+			else{
+				command = ECHO+version+" && "+ECHO+method+" && git log --follow -p"+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+
+						" -G"+" if --"+method;	
+
+			}
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+
+
 
 	private static void getElseMetrics(String method, Integer version) {
 		//directory da cui far partire il comando git    
@@ -1227,7 +1331,7 @@ public class Main {
 				SLASH+projectName+FINER_GIT+version);
 		String command;
 
-		//per vedere solo i cambiamenti avvenuti nella storia con una data parola modificata/aggiunta/eliminata nel codice
+		//per vedere solo i cambiamenti avvenuti nella storia che hanno aggiunto o eliminato righe con una data parola (qui else) nel codice
 		//git log --since="..." -p -S "word" -- file.java
 
 		try {    
@@ -2158,9 +2262,9 @@ public class Main {
 			calculatingElseMetricsMethodLevel=true;
 			getElseMetrics(method,version);
 			calculatingElseMetricsMethodLevel=false;
-			
+
 			calculatingCondMetricMethodLevel=true;
-			//getElseMetrics(method,version);
+			getCondMetric(method,version);
 			calculatingCondMetricMethodLevel=false;
 		}
 	}
