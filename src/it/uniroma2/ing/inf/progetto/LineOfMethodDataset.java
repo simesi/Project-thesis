@@ -19,6 +19,8 @@ public class LineOfMethodDataset {
 	private int cond;
 	private int elseAdded;
 	private int elseDeleted;
+	private String defective= "NO";
+	
 	/**
 	 * @return the version
 	 */
@@ -226,6 +228,12 @@ public class LineOfMethodDataset {
 	
 	
 	
+	public String getDefective() {
+		return defective;
+	}
+	public void setDefective(String defective) {
+		this.defective = defective;
+	}
 	public LineOfMethodDataset(int version, String method) {
 		super();
 		this.version = version;

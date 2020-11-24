@@ -11,6 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -106,6 +107,8 @@ public class Main {
 	private static boolean calculatingElseMetricsMethodLevel=false;
 	private static boolean calculatingCondMetricMethodLevel=false;
 	private static boolean calculatingAuthMetricMethodLevel=false;
+
+	private static LineOfMethodDataset lineOfMethod;
 
 	//--------------------------
 
@@ -306,51 +309,38 @@ public class Main {
 
 		}
 
-		private void getAuthMetricAtMethodLevel(String line, BufferedReader br) {
+		private void getAuthMetricAtMethodLevel(String line, BufferedReader br) throws IOException {
 			String nextLine;
-			int version;
+			String version;
 			String method = "";
 			int nAuth=0;
-			
+
 			line=line.trim();
 			String[] tokens = line.split("\\s+");
 
-			version=Integer.parseInt(tokens[0]);
-			method=tokens[1];
+			version=tokens[0];
+			method=tokens[1].replace("\"","");
 
-			try {
+			nextLine =br.readLine();
+
+
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				nAuth++;
 				nextLine =br.readLine();
+			}
 
-
-				while(nextLine != null) {
-					nAuth++;
-					nextLine =br.readLine();
-				}
-
-				if (nAuth!=0) {
-					//cerchiamo l'oggetto giusto su cui scrivere
-					for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) { 
-						if((arrayOfEntryOfMethodDataset.get(i).getVersion()==(version))&& 
-								arrayOfEntryOfMethodDataset.get(i).getMethod().equals(method)) {
-							arrayOfEntryOfMethodDataset.get(i).setAuthors(nAuth);
-							
-							System.out.print("Metodo: "+method+ " NumAuth: "+nAuth);
-							break;
-						}
-
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} 
+			if (nAuth!=0) {
+				lineOfMethod.setAuthors(nAuth);
+				arrayOfEntryOfMethodDataset.add(lineOfMethod);
+			}
 
 		}
 
 
 
 
-		private void getCondMetricAtMethodLevel(String line, BufferedReader br) {
+		private void getCondMetricAtMethodLevel(String line, BufferedReader br) throws IOException {
 			String nextLine;
 			String version;
 			String filename;
@@ -366,54 +356,41 @@ public class Main {
 			version= tokens[0];
 
 
-			try {
-				//la seconda riga ci ritorna la segnatura del metodo
-				nextLine =br.readLine();
+
+			//la seconda riga ci ritorna la segnatura del metodo
+			nextLine =br.readLine();
+
+			nextLine=nextLine.trim();
+			tokens = nextLine.split("\\s+");
+			filename= tokens[0].replace("\"","");
+
+			//dalla terza riga in poi otteniamo le modifiche apportate (da filtrare) 
+			nextLine =br.readLine();
+
+
+			while(nextLine != null) {
 
 				nextLine=nextLine.trim();
-				tokens = nextLine.split("\\s+");
-				filename= tokens[0];
-
-				//dalla terza riga in poi otteniamo le modifiche apportate (da filtrare) 
+				tokens=nextLine.split("\\s+");
+				if (tokens[0].equals("+"+ifString)){
+					countIfAdded++;
+				}
+				else if(tokens[0].equals("-"+ifString)) {
+					countIfDeleted++;
+				}
 				nextLine =br.readLine();
+			}
 
-
-				while(nextLine != null) {
-
-					nextLine=nextLine.trim();
-					tokens=nextLine.split("\\s+");
-					if (tokens[0].equals("+"+ifString)){
-						countIfAdded++;
-					}
-					else if(tokens[0].equals("-"+ifString)) {
-						countIfDeleted++;
-					}
-					nextLine =br.readLine();
-				}
-
-
-				//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-				for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) {  
-					if((arrayOfEntryOfMethodDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-							arrayOfEntryOfMethodDataset.get(i).getMethod().equals(filename)) {				
-						sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseAdded();
-						sumOfModifiedCondition+=arrayOfEntryOfMethodDataset.get(i).getElseDeleted();
-						sumOfModifiedCondition+=countIfAdded;
-						sumOfModifiedCondition+=countIfDeleted;
-						arrayOfEntryOfMethodDataset.get(i).setCond(sumOfModifiedCondition);
-						break;
-					}
-				}
-
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} 
+			sumOfModifiedCondition+=lineOfMethod.getElseAdded();
+			sumOfModifiedCondition+=lineOfMethod.getElseDeleted();
+			sumOfModifiedCondition+=countIfAdded;
+			sumOfModifiedCondition+=countIfDeleted;
+			lineOfMethod.setCond(sumOfModifiedCondition);
 
 		}
 
 
-		private void getElseMetricsAtMethodLevel(String line, BufferedReader br) {
+		private void getElseMetricsAtMethodLevel(String line, BufferedReader br) throws IOException {
 			String nextLine;
 			String version;
 			String filename;
@@ -428,51 +405,40 @@ public class Main {
 			version= tokens[0];
 
 
-			try {
-				//la seconda riga ci ritorna la segnatura del metodo
-				nextLine =br.readLine();
+
+			//la seconda riga ci ritorna la segnatura del metodo
+			nextLine =br.readLine();
+
+			nextLine=nextLine.trim();
+			tokens = nextLine.split("\\s+");
+			filename= tokens[0].replace("\"","");
+
+			//dalla terza riga in poi otteniamo le modifiche apportate (da filtrare) 
+			nextLine =br.readLine();
+
+
+			while(nextLine != null) {
 
 				nextLine=nextLine.trim();
-				tokens = nextLine.split("\\s+");
-				filename= tokens[0];
-
-				//dalla terza riga in poi otteniamo le modifiche apportate (da filtrare) 
+				tokens=nextLine.split("\\s+");
+				if (tokens[0].equals("+"+elseString)){
+					countElseAdded++;
+				}
+				else if(tokens[0].equals("-"+elseString)) {
+					countElseDeleted++;
+				}
 				nextLine =br.readLine();
+			}
 
-
-				while(nextLine != null) {
-
-					nextLine=nextLine.trim();
-					tokens=nextLine.split("\\s+");
-					if (tokens[0].equals("+"+elseString)){
-						countElseAdded++;
-					}
-					else if(tokens[0].equals("-"+elseString)) {
-						countElseDeleted++;
-					}
-					nextLine =br.readLine();
-				}
-
-				//la scrittura avviene solo se il risultato è maggiore di 0 
-				if (countElseAdded>0||countElseDeleted>0) {
-					//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-					for (int i = 0; i < arrayOfEntryOfMethodDataset.size(); i++) {  
-						if((arrayOfEntryOfMethodDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-								arrayOfEntryOfMethodDataset.get(i).getMethod().equals(filename)) {				
-							arrayOfEntryOfMethodDataset.get(i).setElseAdded(countElseAdded);
-							arrayOfEntryOfMethodDataset.get(i).setElseDeleted(countElseDeleted);
-							break;
-						}
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} 
+			//la scrittura avviene solo se il risultato è maggiore di 0 
+			if (countElseAdded>0||countElseDeleted>0) {
+				lineOfMethod.setElseAdded(countElseAdded);
+				lineOfMethod.setElseDeleted(countElseDeleted);
+			}
 
 		}
 
-		private void getFirstHalfMethodsMetrics(String line, BufferedReader br) {
+		private void getFirstHalfMethodsMetrics(String line, BufferedReader br) throws IOException {
 			String version;
 			int numOfCommits=0;
 			String nextLine;
@@ -498,93 +464,89 @@ public class Main {
 
 			//operazioni per il primo output che è il numero di versione------------------------------
 			version=tokens[0];
+			methodName=tokens[1];
 			//---------------------------------------------------------------------- 
-			try {
-				//lettura prox riga					      					      
+
+			//lettura prox riga					      					      
+			nextLine =br.readLine();
+
+			while (nextLine != null) {
+				numOfCommits++;
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+
+				//discard of modified lines
+				realAddedLinesOfCommit = Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
+
+				//per il Max_LOC_Added
+				maxAddedlines=Math.max(realAddedLinesOfCommit, maxAddedlines);
+
+
+				//solo se le righe inserite sono maggiori di quelle cancellate
+				if(realAddedLinesOfCommit>0) {
+					//per AVG_LOC_Added
+					realAddedLinesOverCommits.add(realAddedLinesOfCommit);
+				}
+
+
+				//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
+				addedLines=addedLines+Integer.parseInt(tokens[0]);
+				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
+				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
+
+
+				//per CHURN (togliamo i commit che hanno solo modificato il codice e quindi risultano +1 sia in linee aggiunte che in quelle eliminate)
+				if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
+					realDeletedLOC=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+					numOfCommitsWithDel++;
+					sumOfRealDeletedLOC= sumOfRealDeletedLOC + realDeletedLOC;
+					maxDeletedLines=Math.max(realDeletedLOC, maxDeletedLines);
+				}
+
+				//per MAX_CHURN
+				maxChurn=Math.max(realAddedLinesOfCommit, maxChurn);
+
+				realDeletedLOC=0;
+				realAddedLinesOfCommit=0;
+
 				nextLine =br.readLine();
+			}
 
-				while (nextLine != null) {
-					numOfCommits++;
-					nextLine=nextLine.trim();
-					tokens=nextLine.split("\\s+");
+			if(numOfCommits==0) {
+				avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
+			}
 
-					//discard of modified lines
-					realAddedLinesOfCommit = Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
+			lineOfMethod = new LineOfMethodDataset(Integer.parseInt(version), methodName);
 
-					//per il Max_LOC_Added
-					maxAddedlines=Math.max(realAddedLinesOfCommit, maxAddedlines);
+			lineOfMethod.setMethodHistories(numOfCommits);
+			lineOfMethod.setMaxStmtAdded(maxAddedlines);
 
+			lineOfMethod.setChurn(Math.max(addedLines-deletedLines, 0));
+			lineOfMethod.setMaxChurn(maxChurn);
+			lineOfMethod.setAvgChurn(avgChurn);
 
-					//solo se le righe inserite sono maggiori di quelle cancellate
-					if(realAddedLinesOfCommit>0) {
-						//per AVG_LOC_Added
-						realAddedLinesOverCommits.add(realAddedLinesOfCommit);
-					}
+			//calcolo AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
+			for(int n=0; n<realAddedLinesOverCommits.size(); n++){
 
+				totalAdded = totalAdded + realAddedLinesOverCommits.get(n);
 
-					//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
-					addedLines=addedLines+Integer.parseInt(tokens[0]);
-					//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
-					deletedLines=deletedLines+Integer.parseInt(tokens[1]);
-					methodName=tokens[2];
-
-					//per CHURN (togliamo i commit che hanno solo modificato il codice e quindi risultano +1 sia in linee aggiunte che in quelle eliminate)
-					if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
-						realDeletedLOC=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
-						numOfCommitsWithDel++;
-						sumOfRealDeletedLOC= sumOfRealDeletedLOC + realDeletedLOC;
-						maxDeletedLines=Math.max(realDeletedLOC, maxDeletedLines);
-					}
-
-					//per MAX_CHURN
-					maxChurn=Math.max(realAddedLinesOfCommit, maxChurn);
-
-					realDeletedLOC=0;
-					realAddedLinesOfCommit=0;
-
-					nextLine =br.readLine();
-				}
-
-				if(numOfCommits==0) {
-					avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
-				}
-
-				LineOfMethodDataset lineOfMethod = new LineOfMethodDataset(Integer.parseInt(version), methodName);
-
-				lineOfMethod.setMethodHistories(numOfCommits);
-				lineOfMethod.setMaxStmtAdded(maxAddedlines);
-
-				lineOfMethod.setChurn(Math.max(addedLines-deletedLines, 0));
-				lineOfMethod.setMaxChurn(maxChurn);
-				lineOfMethod.setAvgChurn(avgChurn);
-
-				//calcolo AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
-				for(int n=0; n<realAddedLinesOverCommits.size(); n++){
-
-					totalAdded = totalAdded + realAddedLinesOverCommits.get(n);
-
-				}
-				if (totalAdded>0) {
-					average = Math.floorDiv(totalAdded,realAddedLinesOverCommits.size());
-				}
+			}
+			if (totalAdded>0) {
+				average = Math.floorDiv(totalAdded,realAddedLinesOverCommits.size());
+			}
 
 
 
-				//--------------------------------------------------
-				lineOfMethod.setAvgStmtAdded(average);  
-				lineOfMethod.setStmtAdded(totalAdded);
-				lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
-				lineOfMethod.setMaxStmtDeleted(maxDeletedLines);
+			//--------------------------------------------------
+			lineOfMethod.setAvgStmtAdded(average);  
+			lineOfMethod.setStmtAdded(totalAdded);
+			lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
+			lineOfMethod.setMaxStmtDeleted(maxDeletedLines);
 
-				if (numOfCommitsWithDel>0) {
-					lineOfMethod.setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
-				}
-				arrayOfEntryOfMethodDataset.add(lineOfMethod);
+			if (numOfCommitsWithDel>0) {
+				lineOfMethod.setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
+			}
 
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} 
 		}
 
 		//per ogni commit si chiamerà questo metodo che ritorna i pathname dei file committati
@@ -1212,7 +1174,7 @@ public class Main {
 		}
 	}
 
-	
+
 
 	//data una versione/release e un filename si ricava il LOC/size del file
 	private static void getLOCMetric(String filename, Integer i) {
@@ -1328,6 +1290,7 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
+
 	private static void getCondMetric(String method, Integer version) {
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -1390,7 +1353,7 @@ public class Main {
 				command = ECHO+version+" && "+ECHO+"\""+method+"\" && git log --follow -p "+ 
 						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+
 						" -S"+" else -- \""+method+"\"";	
-				
+
 			}
 
 			runCommandOnShell(directory, command);
@@ -1416,14 +1379,14 @@ public class Main {
 
 			if(version>1) {
 
-				//ritorna release, righe aggiunte, elimiante e nome del metodo
-				command = ECHO+version+" && git log --follow "
+				//ritorna release e metodo (con il nome di allora), poi righe aggiunte, elimiante e nome del metodo (ad oggi)
+				command = ECHO+version+" "+filename+" && git log --follow "
 						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
-						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+filename;	
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+"\""+filename+"\"";	
 			}
 			else{
-				command = ECHO+version+" && git log --follow "+ 
-						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+filename;	
+				command = ECHO+version+" "+filename+" && git log --follow "+ 
+						"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+"\""+filename+"\"";	
 
 			}
 
@@ -2163,14 +2126,12 @@ public class Main {
 		//METHOD CLASSIFICATION
 		if(studyMethodMetrics) {
 
-
-
 			fileMethodsOfTheCurrentRelease = new ArrayList<>();
 			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 			//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
-
+			//for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {//leva questo commento
+              int i=1;//commenta questa riga
 				gitCheckoutAtGivenVersion(i);
 
 				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
@@ -2184,17 +2145,15 @@ public class Main {
 				//search for java methods in the cloned repository         
 				File folder = new File(projectName+"_FinerGit_"+i);
 				searchMethods(folder, fileMethodsOfTheCurrentRelease,i);
-				//	System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+				System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" methods");
 
 				calculateMethodsMetrics(i);
 				System.out.println("Calculated metrics version "+i);
 				fileMethodsOfTheCurrentRelease.clear();
-			}
+			//} leva questo commento
 
 			writeMethodMetricsResult();
-			
-			
-			
+
 		}
 
 		//cancellazione directory clonata locale del progetto   
@@ -2296,9 +2255,12 @@ public class Main {
 
 	private static void calculateMethodsMetrics(int version) {
 
+		int count=0;
 		//per ogni metodo nella release (version)
 		for (String method : fileMethodsOfTheCurrentRelease) {
-              System.out.println("Inizio a calcolare metriche per: "+method);
+			count++;
+			System.out.println("Inizio a calcolare metriche per metodo: "+count+"°");
+
 			calculatingStmtMetricsMethodLevel = true;
 			//il metodo getFirstHalfMethodMetrics() creerà anche l'arrayList di entry LineOfMethodDataset
 			getFirstHalfMethodMetrics(method,version);
@@ -2311,7 +2273,7 @@ public class Main {
 			calculatingCondMetricMethodLevel=true;
 			getCondMetric(method,version);
 			calculatingCondMetricMethodLevel=false;
-			
+
 			calculatingAuthMetricMethodLevel=true;
 			getNumberOfAuthorsOfMetod( method,version);
 			calculatingAuthMetricMethodLevel=false;
@@ -2336,7 +2298,7 @@ public class Main {
 				fileRenamed=f.getAbsolutePath();
 				//System.out.println(fileRenamed);
 				//System.out.println((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString());
-				
+
 				fileRenamed=fileRenamed.replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName+FINER_GIT+version)+SLASH).toString(), "");
 
 				//ci si costruisce una lista 
