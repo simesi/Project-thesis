@@ -2145,7 +2145,7 @@ public class Main {
 				//search for java methods in the cloned repository         
 				File folder = new File(projectName+"_FinerGit_"+i);
 				searchMethods(folder, fileMethodsOfTheCurrentRelease,i);
-				System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" methods");
+				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
 
 				calculateMethodsMetrics(i);
 				System.out.println("Calculated metrics version "+i);
@@ -2327,39 +2327,39 @@ public class Main {
 			for ( LineOfMethodDataset line : arrayOfEntryOfMethodDataset) {
 
 				fileWriter.append(projectName);
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getVersion()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(line.getMethod());
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMethodHistories()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAuthors()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getStmtAdded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMaxStmtAdded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAvgStmtAdded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getStmtDeleted()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMaxStmtDeleted()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAvgStmtDeleted()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getChurn()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMaxChurn()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAvgChurn()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getCond()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getElseAdded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getElseDeleted()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(line.getDefective());
 				fileWriter.append("\n");
 			}
