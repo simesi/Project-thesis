@@ -100,8 +100,9 @@ public class Main {
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
 	private static final String FINER_GIT="_FinerGit_";
 
-	private static boolean studyMethodMetrics=true; //calcola solo le metriche di metodo
-	private static boolean studyClassMetrics=false; //calcola solo le metriche di classe
+	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
+	private static boolean studyClassMetrics=false; //calcola le metriche di classe
+	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
 
 	private static boolean calculatingStmtMetricsMethodLevel=false;
 	private static boolean calculatingElseMetricsMethodLevel=false;
@@ -109,6 +110,7 @@ public class Main {
 	private static boolean calculatingAuthMetricMethodLevel=false;
 
 	private static LineOfMethodDataset lineOfMethod;
+	private static LineOfClassDataset lineOfClassDataset;
 
 	//--------------------------
 
@@ -265,14 +267,7 @@ public class Main {
 					}
 
 					else if (calculatingNAuth) {
-
 						calculatingNauth(line,br);
-
-					}
-					else if (gettingLastCommit) {
-
-						gettingLastCommit(line,br);
-
 					}
 					else if (calculatingAge) {
 						getAgeMetrics(line,br);
@@ -283,6 +278,11 @@ public class Main {
 					else if (calculatingChgSetSizePhaseTwo) {
 						getFileCommittedTogheter(line,br);
 					}
+					// qui è per il set di "buggy"
+					else if (gettingLastCommit) {
+						gettingLastCommit(line,br);
+					}
+
 					else if (calculatingStmtMetricsMethodLevel) {
 						getFirstHalfMethodsMetrics(line,br);
 					}
@@ -666,23 +666,18 @@ public class Main {
 				}			
 			}
 
-			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-			for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) {  
-				if((arrayOfEntryOfClassDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-						arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename)) {
-					arrayOfEntryOfClassDataset.get(i).setChgSetSize(myChgSetSize);
-					arrayOfEntryOfClassDataset.get(i).setMaxChgSet(maxChgSet);
-					if(count>0) {
-						arrayOfEntryOfClassDataset.get(i).setAvgChgSet(Math.floorDiv(myChgSetSize, count));
-					}
-					else {
-						arrayOfEntryOfClassDataset.get(i).setAvgChgSet(count);
-					}
-					//clear dellal lista che verrà ripopolata per analizzare la metrica su un altro file
-					chgSetSizeList.clear();
-				}
+			lineOfClassDataset.setChgSetSize(myChgSetSize);
+			lineOfClassDataset.setMaxChgSet(maxChgSet);
+			if(count>0) {
+				lineOfClassDataset.setAvgChgSet(Math.floorDiv(myChgSetSize, count));
 			}
+			else {
+				lineOfClassDataset.setAvgChgSet(count);
+			}
+			//clear dellal lista che verrà ripopolata per analizzare la metrica su un altro file
+			chgSetSizeList.clear();
 
+			arrayOfEntryOfClassDataset.add(lineOfClassDataset);
 		}
 
 		private void gitCheckoutAtGivenCommit(String commit, BufferedReader br) {
@@ -862,16 +857,9 @@ public class Main {
 				nextLine =br.readLine();
 			}
 
-
 			//cerchiamo l'oggetto giusto su cui scrivere
-			for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) { 
-				if((arrayOfEntryOfClassDataset.get(i).getVersion()==version) && (arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename))) {
-					arrayOfEntryOfClassDataset.get(i).setNauth(nAuth);
+			lineOfClassDataset.setNauth(nAuth);
 
-					break;
-				}
-
-			}
 
 		}
 
@@ -921,32 +909,18 @@ public class Main {
 
 			//fine dello stream (ultimo output è l'ultima data di commit)
 
-			//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-			for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) {  
-				if((arrayOfEntryOfClassDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-						arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename)) {
+			age= Math.toIntExact(ChronoUnit.WEEKS.between(firstDateCommit,lastDateCommit));
 
-					//Instant firstDay = firstDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
-					//Instant lastDay = lastDateCommit.atStartOfDay(ZoneId.systemDefault()).toInstant();
+			lineOfClassDataset.setWeightedAge(0);
 
-					//LocalDateTime start= LocalDateTime.ofInstant(firstDay, ZoneId.systemDefault());
-					//LocalDateTime last= LocalDateTime.ofInstant(lastDay, ZoneId.systemDefault());
-
-					//System.out.println("First commit: "+firstDateCommit);
-					//System.out.println("Last commit: "+lastDateCommit);
-					age= Math.toIntExact(ChronoUnit.WEEKS.between(firstDateCommit,lastDateCommit));
-
-					arrayOfEntryOfClassDataset.get(i).setWeightedAge(0);
-
-					if(arrayOfEntryOfClassDataset.get(i).getLOCTouched()>0) {
-						arrayOfEntryOfClassDataset.get(i).setWeightedAge(Math.floorDiv(age,
-								arrayOfEntryOfClassDataset.get(i).getLOCTouched()));
-					}
-					arrayOfEntryOfClassDataset.get(i).setAge(age);
-					break;
-				}
+			if(lineOfClassDataset.getLOCTouched()>0) {
+				lineOfClassDataset.setWeightedAge(Math.floorDiv(age,
+						lineOfClassDataset.getLOCTouched()));
 			}
+			lineOfClassDataset.setAge(age);
+
 		}
+
 
 
 		private void calculateLOC(String line, BufferedReader br) throws IOException {
@@ -979,10 +953,10 @@ public class Main {
 				nextLine =br.readLine();
 			}
 			//abbiamo raggiunto la fine (la prima riga ha il numero di versione)
-			LineOfClassDataset l=new LineOfClassDataset(Integer.parseInt(version),filename); //id versione, filename
-			l.setSize(addedLines-deletedLines);//set del valore di LOC
+			lineOfClassDataset=new LineOfClassDataset(Integer.parseInt(version),filename); //id versione, filename
+			lineOfClassDataset.setSize(addedLines-deletedLines);//set del valore di LOC
 
-			arrayOfEntryOfClassDataset.add(l);
+
 
 		}
 
@@ -1071,33 +1045,26 @@ public class Main {
 			,int modified,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
 		int totalAdded=0;
 
-		//si itera nell'arraylist per cercare l'oggetto giusto da scrivere 
-		for (int i = 0; i < arrayOfEntryOfClassDataset.size(); i++) {  
-			if((arrayOfEntryOfClassDataset.get(i).getVersion()==Integer.parseInt(version))&& 
-					arrayOfEntryOfClassDataset.get(i).getFileName().equals(filename)) {
+		lineOfClassDataset.setMAXLOCAdded(maxAddedlines);
+		lineOfClassDataset.setNR(numOfCommit);
+		lineOfClassDataset.setChurn(Math.max(churn, 0));
+		lineOfClassDataset.setMaxChurn(maxChurn);
+		lineOfClassDataset.setAVGChurn(avgChurn);
 
-				arrayOfEntryOfClassDataset.get(i).setMAXLOCAdded(maxAddedlines);
-				arrayOfEntryOfClassDataset.get(i).setNR(numOfCommit);
-				arrayOfEntryOfClassDataset.get(i).setChurn(Math.max(churn, 0));
-				arrayOfEntryOfClassDataset.get(i).setMaxChurn(maxChurn);
-				arrayOfEntryOfClassDataset.get(i).setAVGChurn(avgChurn);
+		//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
+		for(int n=0; n<addedLinesForEveryRevision.size(); n++){
 
-				//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
-				for(int n=0; n<addedLinesForEveryRevision.size(); n++){
+			totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
 
-					totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
-
-				}
-				if (totalAdded>0) {
-					average = Math.floorDiv(totalAdded,addedLinesForEveryRevision.size());
-				}
-				//--------------------------------------------------
-				arrayOfEntryOfClassDataset.get(i).setAVGLOCAdded(average);
-				arrayOfEntryOfClassDataset.get(i).setLOCAdded(totalAdded);
-				arrayOfEntryOfClassDataset.get(i).setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
-				break;
-			}
 		}
+		if (totalAdded>0) {
+			average = Math.floorDiv(totalAdded,addedLinesForEveryRevision.size());
+		}
+		//--------------------------------------------------
+		lineOfClassDataset.setAVGLOCAdded(average);
+		lineOfClassDataset.setLOCAdded(totalAdded);
+		lineOfClassDataset.setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
+
 	}
 
 
@@ -2130,15 +2097,15 @@ public class Main {
 			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 			//per ogni versione nella primà metà delle release
-			//for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {//leva questo commento
-              int i=1;//commenta questa riga
+			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+
 				gitCheckoutAtGivenVersion(i);
 
 				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 
 
 				//create repository with FinerGit------------------------------
-				//runFinerGitCloneForVersion(directory,i); //levare commento per produrre i file metodo
+				//runFinerGitCloneForVersion(directory,i); //leva questo commento per produrre i file metodo
 				//-------------------------------------------------------------
 
 
@@ -2150,11 +2117,16 @@ public class Main {
 				calculateMethodsMetrics(i);
 				System.out.println("Calculated metrics version "+i);
 				fileMethodsOfTheCurrentRelease.clear();
-			//} leva questo commento
+			} 
 
 			writeMethodMetricsResult();
 
 		}
+
+		if(studyCommitMetrics) {
+
+		}
+
 
 		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
