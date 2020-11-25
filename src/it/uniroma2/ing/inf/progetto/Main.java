@@ -66,12 +66,14 @@ public class Main {
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
 	private static List<String> filepathsOfTheCurrentRelease;
 	private static List<String> fileMethodsOfTheCurrentRelease;
+	private static List<String> commitOfCurrentRelease;
 	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
 	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
 	//del numero di files committati insieme
+	
 
 	private static boolean doingCheckout=false;
 	private static boolean calculatingIncrementalMetrics=false;
@@ -100,9 +102,9 @@ public class Main {
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
 	private static final String FINER_GIT="_FinerGit_";
 
-	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
+	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
 	private static boolean calculatingStmtMetricsMethodLevel=false;
 	private static boolean calculatingElseMetricsMethodLevel=false;
@@ -1443,48 +1445,50 @@ public class Main {
 
 
 
-			fileWriter.append("Version,File Name,Size(LOC), LOC_Touched,"
+			fileWriter.append("Project,Release,Class,Size(LOC), LOC_Touched,"
 					+ "NR,NFix,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,"
-					+ "Churn,MAX_Churn,AVG_Churn,ChgSetSize,MAX_ChgSet,AVG_ChgSet,Age,Weighted_Age,Buggy");
+					+ "Churn,MAX_Churn,AVG_Churn,ChgSetSize,MAX_ChgSet,AVG_ChgSet,Age,Weighted_Age,Actual_Defective");
 			fileWriter.append("\n");
 			for ( LineOfClassDataset line : arrayOfEntryOfClassDataset) {
 
+				fileWriter.append(projectName);
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getVersion()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(line.getFileName());
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getSize()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getLOCTouched()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getNR()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getnFix()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getNauth()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getLocadded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMAXLOCAdded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAVGLOCAdded()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getChurn()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMaxChurn()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAVGChurn()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getChgSetSize()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMaxChgSet()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAvgChgSet()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAge()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getWeightedAge()));
-				fileWriter.append(",");
+				fileWriter.append(";");
 				fileWriter.append(line.getBuggy());
 				fileWriter.append("\n");
 			}
@@ -2102,8 +2106,6 @@ public class Main {
 				gitCheckoutAtGivenVersion(i);
 
 				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-
-
 				//create repository with FinerGit------------------------------
 				//runFinerGitCloneForVersion(directory,i); //leva questo commento per produrre i file metodo
 				//-------------------------------------------------------------
@@ -2124,7 +2126,29 @@ public class Main {
 		}
 
 		if(studyCommitMetrics) {
+			
+				commitOfCurrentRelease = new ArrayList<>();
+			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
+			/*//per ogni versione nella primà metà delle release
+			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+
+				gitCheckoutAtGivenVersion(i);
+
+				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+				//create repository with FinerGit------------------------------
+				//runFinerGitCloneForVersion(directory,i); //leva questo commento per produrre i file metodo
+				//-------------------------------------------------------------
+
+
+				//search for java methods in the cloned repository         
+				File folder = new File(projectName+"_FinerGit_"+i);
+				searchMethods(folder, fileMethodsOfTheCurrentRelease,i);
+				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
+
+				calculateMethodsMetrics(i);
+				System.out.println("Calculated metrics version "+i);
+				fileMethodsOfTheCurrentRelease.clear();*/
 		}
 
 
@@ -2292,9 +2316,9 @@ public class Main {
 
 
 
-			fileWriter.append("Project,Version,Method,methodHistories,authors,"
+			fileWriter.append("Project,Release,Method,methodHistories,authors,"
 					+ "stmtAdded,maxStmtAdded,avgStmtAdded,stmtDeleted,maxStmtDeleted,"
-					+ "avgStmtDeleted,Churn,MaxChurn,AvgChurn,cond,elseAdded,elseDeleted,Predicted Defective");
+					+ "avgStmtDeleted,Churn,MaxChurn,AvgChurn,cond,elseAdded,elseDeleted,Actual_Defective");
 			fileWriter.append("\n");
 			for ( LineOfMethodDataset line : arrayOfEntryOfMethodDataset) {
 
