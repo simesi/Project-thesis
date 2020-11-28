@@ -6,7 +6,8 @@ public class LineOfCommitDataset {
 	private String commit;
 	private int numModSub;
 	private int numModDir;
-	private int entropy;
+	private int numModFiles;
+	private double entropy;
 	private int lineAdded;
 	private int lineDeleted;
 	private int lineBeforeChange;
@@ -71,13 +72,13 @@ public class LineOfCommitDataset {
 	/**
 	 * @return the entropy
 	 */
-	public int getEntropy() {
+	public double getEntropy() {
 		return entropy;
 	}
 	/**
 	 * @param entropy the entropy to set
 	 */
-	public void setEntropy(int entropy) {
+	public void setEntropy(double entropy) {
 		this.entropy = entropy;
 	}
 	/**
@@ -213,6 +214,24 @@ public class LineOfCommitDataset {
 		this.bugIntroducing = bugIntroducing;
 	}
 	
+	/**
+	 * @return the numModFiles
+	 */
+	public int getNumModFiles() {
+		return numModFiles;
+	}
+	/**
+	 * @param numModFiles the numModFiles to set
+	 */
+	public void setNumModFiles(int numModFiles) {
+		this.numModFiles = numModFiles;
+	}
+	/**
+	 * @return the defectFix
+	 */
+	public String getDefectFix() {
+		return defectFix;
+	}
 	public LineOfCommitDataset(int version, String commit) {
 		super();
 		this.version = version;

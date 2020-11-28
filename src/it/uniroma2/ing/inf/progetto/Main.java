@@ -11,7 +11,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -64,16 +63,18 @@ public class Main {
 	public static Map<LocalDateTime, String> releaseID;
 	public static List<LocalDateTime> releases;
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
-	private static List<String> filepathsOfTheCurrentRelease;
-	private static List<String> fileMethodsOfTheCurrentRelease;
-	private static List<String> commitOfCurrentRelease;
-	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
-	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
 	private static List<TicketTakenFromJIRA> tickets;
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
 	//del numero di files committati insieme
-	
+
+	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
+	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
+	private static List<LineOfCommitDataset> arrayOfEntryOfCommitDataset;
+
+	private static List<String> filepathsOfTheCurrentRelease;
+	private static List<String> fileMethodsOfTheCurrentRelease;
+	private static List<String> commitOfCurrentRelease;
 
 	private static boolean doingCheckout=false;
 	private static boolean calculatingIncrementalMetrics=false;
@@ -111,8 +112,12 @@ public class Main {
 	private static boolean calculatingCondMetricMethodLevel=false;
 	private static boolean calculatingAuthMetricMethodLevel=false;
 
+	private static boolean calculatingCommitInRelease=false;
+	private static boolean calculatingFirstHalfCommitMetrics=false;
+
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
+	private static LineOfCommitDataset lineOfCommit;
 
 	//--------------------------
 
@@ -258,16 +263,12 @@ public class Main {
 						doingCheckout=false;
 						gitCheckoutAtGivenCommit(line,br);
 					}
-
 					else if (calculatingIncrementalMetrics) {
-
 						calculateLOC(line,br);
 					}
-
 					else if (calculatingNotIncrementalMetrics) {
 						calculatingNotIncrementalMetrics(line,br);
 					}
-
 					else if (calculatingNAuth) {
 						calculatingNauth(line,br);
 					}
@@ -284,7 +285,6 @@ public class Main {
 					else if (gettingLastCommit) {
 						gettingLastCommit(line,br);
 					}
-
 					else if (calculatingStmtMetricsMethodLevel) {
 						getFirstHalfMethodsMetrics(line,br);
 					}
@@ -297,6 +297,13 @@ public class Main {
 					else if(calculatingAuthMetricMethodLevel) {
 						getAuthMetricAtMethodLevel(line,br);
 					}
+					else if(calculatingCommitInRelease) {
+						getCommitIdForCommitLevel(line,br);
+					}
+					else if(calculatingFirstHalfCommitMetrics) {
+						getFirstHalfCommitMetrics(line,br);
+					}
+
 					else {
 
 						System.out.println(line);
@@ -309,6 +316,119 @@ public class Main {
 				System.exit(-1);
 			}
 
+		}
+
+		private void getFirstHalfCommitMetrics(String line, BufferedReader br)  throws IOException {
+
+			String version;
+			String nextLine;
+			String commit;
+			int numFile=0;
+			int realAddedLines=0;
+			int realDeletedLOC=0;
+			int sumOfDelLines=0;
+			String fullFilePath;
+			String subSystem;
+			String directory;
+			int sumModifiedLines=0;
+			int i;
+			double entropy = 0.0;
+			int diff=0;
+			List<Integer> arrModifiedLines= new ArrayList<>();
+			List<String> arrSubSystemList = new ArrayList<>();
+			List<String> arrDirList = new ArrayList<>();
+
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+
+			//il primo input è la versione
+			version=tokens[0];
+			//con il commit id
+			commit=tokens[1];
+
+			nextLine =br.readLine();
+
+			//da qui si otterrà una lista di hash commits
+
+			while (nextLine != null) {
+				numFile++;
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+
+				//discard of modified lines
+				realAddedLines +=Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
+				realDeletedLOC+=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+								
+				//for entropy
+				sumOfDelLines=Integer.parseInt(tokens[1]);
+				if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
+					diff=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+					}
+				arrModifiedLines.add(sumOfDelLines-diff);
+				diff=0;
+				
+				fullFilePath=tokens[2];
+				//split del pathname (la divisione avviene al primo src trovato nel path)
+				String[] parts = fullFilePath.split("src",2);
+				subSystem = parts[0];
+
+				if (!arrSubSystemList.contains(subSystem)){
+					arrSubSystemList.add(subSystem);
+				}
+				
+				//ora levo il nome del file per avere la directory
+				i = parts[1].lastIndexOf("/");
+				directory =  parts[1].substring(0, i);
+				if (!arrDirList.contains(directory)){
+					arrDirList.add(directory);
+				}
+				nextLine =br.readLine();
+			}
+			
+			lineOfCommit = new LineOfCommitDataset(Integer.parseInt(version), commit);
+			lineOfCommit.setLineAdded(realAddedLines);
+			lineOfCommit.setLineDeleted(realDeletedLOC);
+			lineOfCommit.setNumModFiles(numFile);
+			lineOfCommit.setNumModDir(arrDirList.size());
+			lineOfCommit.setNumModSub(arrSubSystemList.size());
+			
+			for (int j = 0; j < arrModifiedLines.size(); j++) {
+			sumModifiedLines += arrModifiedLines.get(j); 	
+			} 
+			
+			for (int j = 0; j < arrModifiedLines.size(); j++) {
+				entropy+=(double)((((double)arrModifiedLines.get(j)*(-1))/(double)sumModifiedLines))*
+				(Math.log((double)arrModifiedLines.get(j)/(double)sumModifiedLines)
+				/(double) Math.log(2)); 	
+				} 
+			
+			lineOfCommit.setEntropy(entropy);
+			
+			arrModifiedLines.clear();
+			arrSubSystemList.clear();
+			arrDirList.clear();
+		}
+
+		private void getCommitIdForCommitLevel(String line, BufferedReader br) throws IOException {
+			String version;
+			String nextLine;
+			String commit;
+
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+
+			//il primo input è la versione
+			version=tokens[0];
+
+			nextLine =br.readLine();
+
+			//da qui si otterrà una lista di hash commits
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				//si popola la lista della release corrente
+				commitOfCurrentRelease.add(nextLine);
+				nextLine =br.readLine();
+			}
 		}
 
 		private void getAuthMetricAtMethodLevel(String line, BufferedReader br) throws IOException {
@@ -703,7 +823,7 @@ public class Main {
 
 					nextLine =br.readLine();
 				}
-				//si prende solo l'ultimo commit dello stream (il più vecchio)
+				//si prende solo l'ultimo commit dello stream (il più vecchio) e si fa il checkout
 				command = "git checkout "+myCommit;	
 
 				runCommandOnShell(directory, command);
@@ -2003,7 +2123,7 @@ public class Main {
 
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 		try {
-			//ritorna l'id del commit su cui si farà il checkout
+			//ritorna gli id del commit e sul più vecchio si farà il checkout
 			String command = "git rev-list "
 					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master ";
 
@@ -2101,23 +2221,23 @@ public class Main {
 			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 			//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
 
-				gitCheckoutAtGivenVersion(i);
+				gitCheckoutAtGivenVersion(rel);
 
 				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 				//create repository with FinerGit------------------------------
-				//runFinerGitCloneForVersion(directory,i); //leva questo commento per produrre i file metodo
+				runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
 				//-------------------------------------------------------------
 
 
 				//search for java methods in the cloned repository         
-				File folder = new File(projectName+"_FinerGit_"+i);
-				searchMethods(folder, fileMethodsOfTheCurrentRelease,i);
+				File folder = new File(projectName+"_FinerGit_"+rel);
+				searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
 				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
 
-				calculateMethodsMetrics(i);
-				System.out.println("Calculated metrics version "+i);
+				calculateMethodsMetrics(rel);
+				System.out.println("Calculated metrics version "+rel);
 				fileMethodsOfTheCurrentRelease.clear();
 			} 
 
@@ -2125,32 +2245,33 @@ public class Main {
 
 		}
 
+		//----------------------------------------------------------------------------
+
+		//COMMIT CLASSIFICATION
 		if(studyCommitMetrics) {
-			
-				commitOfCurrentRelease = new ArrayList<>();
-			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
-			/*//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+			commitOfCurrentRelease = new ArrayList<>();
+			arrayOfEntryOfCommitDataset = new ArrayList<LineOfCommitDataset>();
 
-				gitCheckoutAtGivenVersion(i);
+			//per ogni versione nella primà metà delle release
+			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
 
-				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-				//create repository with FinerGit------------------------------
-				//runFinerGitCloneForVersion(directory,i); //leva questo commento per produrre i file metodo
-				//-------------------------------------------------------------
+				gitCheckoutAtGivenVersion(rel);
 
+				calculatingCommitInRelease=true;
+				//search for commits in the release in the cloned repository         
+				SearchForCommitsOfGivenRelease(rel);
+				calculatingCommitInRelease=false;
 
-				//search for java methods in the cloned repository         
-				File folder = new File(projectName+"_FinerGit_"+i);
-				searchMethods(folder, fileMethodsOfTheCurrentRelease,i);
-				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
+				System.out.println("Founded "+commitOfCurrentRelease.size()+" commits on release "+rel);
 
-				calculateMethodsMetrics(i);
-				System.out.println("Calculated metrics version "+i);
-				fileMethodsOfTheCurrentRelease.clear();*/
+				calculateCommitMetrics(rel);
+				System.out.println("Calculated metrics version "+rel);
+
+				commitOfCurrentRelease.clear();
+			}
+			//writeCommitMetricsResult();
 		}
-
 
 		//cancellazione directory clonata locale del progetto   
 		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
@@ -2367,5 +2488,82 @@ public class Main {
 
 	}
 
+	//questo metodo lancia un comando che ritornerà tutti i commit hash dei copmmit avvenuti nella release passata
+	private static void SearchForCommitsOfGivenRelease(int release) {
 
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+		String command;
+
+		try {
+			if(release>1) {
+				command = ECHO+release+" && git log --pretty=format:\"%H\""
+						+ " --since="+fromReleaseIndexToDate.get(String.valueOf(release-1))+
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(release));	
+			}
+			else {  //prima release
+				command = ECHO+release+" && git log --pretty=format:\"%H\" "
+						+ "--until="+fromReleaseIndexToDate.get(String.valueOf(release));	
+			}
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	private static void calculateCommitMetrics(int version) {
+
+		int count=0;
+		//per ogni commit nella release (version)
+		for (String commit : commitOfCurrentRelease) {
+			count++;
+
+			calculatingFirstHalfCommitMetrics = true;
+			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
+			searchFirstHalfCommitMetrics(version,commit);
+			calculatingFirstHalfCommitMetrics = false;
+
+			/*calculatingElseMetricsMethodLevel=true;
+				getElseMetrics(method,version);
+				calculatingElseMetricsMethodLevel=false;
+
+				calculatingCondMetricMethodLevel=true;
+				getCondMetric(method,version);
+				calculatingCondMetricMethodLevel=false;
+
+				calculatingAuthMetricMethodLevel=true;
+				getNumberOfAuthorsOfMetod( method,version);
+				calculatingAuthMetricMethodLevel=false;*/
+		}
+	}
+
+
+	private static void searchFirstHalfCommitMetrics(Integer version, String commit) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
+
+		try {    
+			//ritorna release e commit id, poi righe aggiunte, elimiante e nome del file java modificato
+			command = ECHO+version+" "+commit+" && git show "+FORMATNUMSTAT
+					+commit+"  -- *.java";	
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+
+	}
 }
