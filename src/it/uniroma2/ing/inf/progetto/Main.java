@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
+import java.nio.channels.NonReadableChannelException;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
 import org.json.JSONArray;
@@ -67,7 +68,9 @@ public class Main {
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
 	//del numero di files committati insieme
-	private static List<String> modifiedFilesOFCommit; //lista statica dei file toccati dal commit in esame "lineofcommit"
+	private static List<String> modifiedFilesOfCommit; //lista statica dei file toccati dal commit in esame "lineofcommit"
+	private static List<String> modifiedSubOfCommit;  //lista statica dei subsystem toccati dal commit in esame "lineofcommit"
+	private static String authorOfCommit; //serve per EXP
 
 	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
 	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
@@ -115,7 +118,9 @@ public class Main {
 
 	private static boolean calculatingCommitInRelease=false;
 	private static boolean calculatingFirstHalfCommitMetrics=false;
-	private static boolean calculatingAuthMetricCommitLevel=false;
+	private static boolean calculatingNumDevAndNucMetricCommitLevel=false;
+	private static boolean  calculatingSexp=false;
+	private static boolean calculatingAuthorOfCommit=false;
 
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
@@ -305,8 +310,14 @@ public class Main {
 					else if(calculatingFirstHalfCommitMetrics) {
 						getFirstHalfCommitMetrics(line,br);
 					}
-					else if(calculatingAuthMetricCommitLevel) {
+					else if(calculatingNumDevAndNucMetricCommitLevel) {
 						getNumDevCommitLevel(line,br);
+					}
+					else if(calculatingAuthorOfCommit){
+						getAuthor(line,br);
+					}
+					else if(calculatingSexp) {
+						getSexp(line,br);
 					}
 					else {
 
@@ -322,14 +333,56 @@ public class Main {
 
 		}
 
-		private void getNumDevCommitLevel(String line, BufferedReader br) throws IOException {
+
+		private void getSexp(String line, BufferedReader br) throws IOException {
+			
 			String nextLine;
-			int nDev=1;
+			int numCommit=0;
 
 			line=line.trim();
 			String[] tokens = line.split("\\s+");
 
-			//version=tokens[0];
+			numCommit+=Integer.parseInt(tokens[0]);
+
+			nextLine =br.readLine();
+
+
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				tokens = line.split("\\s+");
+				numCommit+=Integer.parseInt(tokens[0]);
+				
+				nextLine =br.readLine();
+			}
+
+			lineOfCommit.setSubExp(numCommit);
+			 
+		}
+
+		private void getAuthor(String line, BufferedReader br) throws IOException{
+			String nextLine;
+			String myAuthor = "";
+
+			line=line.trim();
+
+			myAuthor=line;
+
+			nextLine =br.readLine();
+
+			while(nextLine != null) {
+			}
+
+			authorOfCommit=myAuthor; 
+		}
+		private void getNumDevCommitLevel(String line, BufferedReader br) throws IOException {
+			String nextLine;
+			int nDev=1;
+			int numCommit=0;
+
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+
+			numCommit+=Integer.parseInt(tokens[0]);
 			//method=tokens[1].replace("\"","");
 
 			nextLine =br.readLine();
@@ -337,13 +390,16 @@ public class Main {
 
 			while(nextLine != null) {
 				nextLine=nextLine.trim();
+				tokens = line.split("\\s+");
+				numCommit+=Integer.parseInt(tokens[0]);
 				nDev++;
+
 				nextLine =br.readLine();
 			}
 
-			if (nDev!=0) {
-				lineOfCommit.setNumDev(nDev);
-			}
+			lineOfCommit.setNumDev(nDev);
+			lineOfCommit.setNuc(numCommit);
+
 
 		}
 
@@ -364,7 +420,6 @@ public class Main {
 			double entropy = 0.0;
 			int diff=0;
 			List<Integer> arrModifiedLines= new ArrayList<>();
-			List<String> arrSubSystemList = new ArrayList<>();
 			List<String> arrDirList = new ArrayList<>();
 
 			line=line.trim();
@@ -398,14 +453,15 @@ public class Main {
 
 				fullFilePath=tokens[2];
 
-				modifiedFilesOFCommit.add(fullFilePath.concat(" "));//ci servirà dopo per il calcolo di NDEV
+				modifiedFilesOfCommit.add(fullFilePath.concat(" "));//ci servirà dopo per il calcolo di NDEV
 
 				//split del pathname (la divisione avviene al primo src trovato nel path)
-				String[] parts = fullFilePath.split("src",2);
+				String[] parts = fullFilePath.split("/src/",2);
 				subSystem = parts[0];
 
-				if (!arrSubSystemList.contains(subSystem)){
-					arrSubSystemList.add(subSystem);
+
+				if (!modifiedSubOfCommit.contains(subSystem)){
+					modifiedSubOfCommit.add(subSystem);
 				}
 
 				//ora levo il nome del file per avere la directory
@@ -422,8 +478,9 @@ public class Main {
 			lineOfCommit.setLineDeleted(realDeletedLOC);
 			lineOfCommit.setNumModFiles(numFile);
 			lineOfCommit.setNumModDir(arrDirList.size());
-			lineOfCommit.setNumModSub(arrSubSystemList.size());
+			lineOfCommit.setNumModSub(modifiedSubOfCommit.size());
 
+			//per l'entropia
 			for (int j = 0; j < arrModifiedLines.size(); j++) {
 				sumModifiedLines += arrModifiedLines.get(j); 	
 			} 
@@ -437,7 +494,6 @@ public class Main {
 			lineOfCommit.setEntropy(entropy);
 
 			arrModifiedLines.clear();
-			arrSubSystemList.clear();
 			arrDirList.clear();
 		}
 
@@ -2255,7 +2311,8 @@ public class Main {
 
 			commitOfCurrentRelease = new ArrayList<>();
 			arrayOfEntryOfCommitDataset = new ArrayList<>();
-			modifiedFilesOFCommit = new ArrayList<>();
+			modifiedFilesOfCommit = new ArrayList<>();
+			modifiedSubOfCommit= new ArrayList<>();
 
 			//per ogni versione nella primà metà delle release
 			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
@@ -2431,7 +2488,7 @@ public class Main {
 			calculatingAuthMetricMethodLevel=false;
 		}
 	}
-	
+
 	private static void calculateCommitMetrics(int version) {
 
 		int count=0;
@@ -2444,11 +2501,21 @@ public class Main {
 			searchFirstHalfCommitMetrics(version,commit);
 			calculatingFirstHalfCommitMetrics = false;
 
-			calculatingAuthMetricCommitLevel=true;
-			getNumberOfAuthorsOfCommit( commit,version);
-			calculatingAuthMetricCommitLevel=false;
+			calculatingNumDevAndNucMetricCommitLevel=true;
+			getNumberOfDevAndNucOfCommitLevel(commit,version);
+			calculatingNumDevAndNucMetricCommitLevel=false;
 
-			modifiedFilesOFCommit.clear();
+			calculatingAuthorOfCommit=true;
+			getAuthorOfCommit(commit);
+			calculatingAuthorOfCommit=false;
+
+			calculatingSexp=true;
+			getSexpCommitLevel(commit);
+			calculatingSexp=false;
+
+
+			modifiedFilesOfCommit.clear();
+			modifiedSubOfCommit.clear();
 		}
 	}
 
@@ -2544,7 +2611,7 @@ public class Main {
 	}
 
 	//questo metodo lancia un comando che ritornerà tutti i commit hash dei copmmit avvenuti nella release passata
-	private static void SearchForCommitsOfGivenRelease(int release) {
+	public static void SearchForCommitsOfGivenRelease(int release) {
 
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
@@ -2554,11 +2621,11 @@ public class Main {
 			if(release>1) {
 				command = ECHO+release+" && git log --pretty=format:\"%H\""
 						+ " --since="+fromReleaseIndexToDate.get(String.valueOf(release-1))+
-						" --until="+fromReleaseIndexToDate.get(String.valueOf(release));	
+						" --until="+fromReleaseIndexToDate.get(String.valueOf(release))+" -- *.java" ;	
 			}
 			else {  //prima release
 				command = ECHO+release+" && git log --pretty=format:\"%H\" "
-						+ "--until="+fromReleaseIndexToDate.get(String.valueOf(release));	
+						+ "--until="+fromReleaseIndexToDate.get(String.valueOf(release))+" -- *.java";	
 			}
 			runCommandOnShell(directory, command);
 
@@ -2570,8 +2637,6 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
-
-	
 
 
 	private static void searchFirstHalfCommitMetrics(Integer version, String commit) {
@@ -2599,7 +2664,7 @@ public class Main {
 	}
 
 	//per ottenere il numero di commit per ogni autore che ha modificato i "modifiedFiles" fino al commit passato 
-	private static void getNumberOfAuthorsOfCommit(String commit, Integer version) {
+	private static void getNumberOfDevAndNucOfCommitLevel(String commit, Integer version) {
 
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -2609,8 +2674,8 @@ public class Main {
 		try {
 			command = "git shortlog -sn "+commit+" -- ";
 			//aggiungo i nome dei file toccati dal commit in esame
-			for (int i = 0; i < modifiedFilesOFCommit.size(); i++) {
-				command.concat(modifiedFilesOFCommit.get(i));				
+			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
+				command.concat(modifiedFilesOfCommit.get(i));				
 			}
 
 			runCommandOnShell(directory, command);
@@ -2623,4 +2688,54 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
+
+	
+
+	private static void getAuthorOfCommit(String commit) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
+
+		try {    
+			//ritorna l'autore del commit 
+			command = "git show -s --format=\"%an\"" +commit;	
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+	
+	//per ottenere il numero di commit dell'author rigurdanti i "subsystem" fino al commit passato 
+		private static void getSexpCommitLevel(String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {
+				command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\" -- ";
+				//aggiungo i nome dei file toccati dal commit in esame
+				for (int i = 0; i < modifiedSubOfCommit.size(); i++) {
+					command.concat(modifiedSubOfCommit.get(i));				
+				}
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
 }
