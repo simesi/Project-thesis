@@ -67,6 +67,7 @@ public class Main {
 	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
 	//del numero di files committati insieme
+	private static List<String> modifiedFilesOFCommit; //lista statica dei file toccati dal commit in esame "lineofcommit"
 
 	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
 	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
@@ -79,7 +80,7 @@ public class Main {
 	private static boolean doingCheckout=false;
 	private static boolean calculatingIncrementalMetrics=false;
 	private static boolean calculatingNotIncrementalMetrics=false;
-	private static boolean calculatingNAuth=false;
+	private static boolean calculatingAuthClassLevel=false;
 	private static boolean calculatingChgSetSizePhaseOne=false;
 	private static boolean calculatingChgSetSizePhaseTwo=false;
 	private static boolean gettingLastCommit=false;
@@ -114,6 +115,7 @@ public class Main {
 
 	private static boolean calculatingCommitInRelease=false;
 	private static boolean calculatingFirstHalfCommitMetrics=false;
+	private static boolean calculatingAuthMetricCommitLevel=false;
 
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
@@ -269,11 +271,11 @@ public class Main {
 					else if (calculatingNotIncrementalMetrics) {
 						calculatingNotIncrementalMetrics(line,br);
 					}
-					else if (calculatingNAuth) {
-						calculatingNauth(line,br);
+					else if (calculatingAuthClassLevel) {
+						calculatingNauthClassLevel(line,br);
 					}
 					else if (calculatingAge) {
-						getAgeMetrics(line,br);
+						getAgeMetricsClassLevel(line,br);
 					}
 					else if (calculatingChgSetSizePhaseOne) {
 						getFileCommitsOnGivenRelease(line,br);
@@ -303,7 +305,9 @@ public class Main {
 					else if(calculatingFirstHalfCommitMetrics) {
 						getFirstHalfCommitMetrics(line,br);
 					}
-
+					else if(calculatingAuthMetricCommitLevel) {
+						getNumDevCommitLevel(line,br);
+					}
 					else {
 
 						System.out.println(line);
@@ -314,6 +318,31 @@ public class Main {
 
 				ioe.printStackTrace();
 				System.exit(-1);
+			}
+
+		}
+
+		private void getNumDevCommitLevel(String line, BufferedReader br) throws IOException {
+			String nextLine;
+			int nDev=1;
+
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+
+			//version=tokens[0];
+			//method=tokens[1].replace("\"","");
+
+			nextLine =br.readLine();
+
+
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				nDev++;
+				nextLine =br.readLine();
+			}
+
+			if (nDev!=0) {
+				lineOfCommit.setNumDev(nDev);
 			}
 
 		}
@@ -358,16 +387,19 @@ public class Main {
 				//discard of modified lines
 				realAddedLines +=Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
 				realDeletedLOC+=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
-								
+
 				//for entropy
 				sumOfDelLines=Integer.parseInt(tokens[1]);
 				if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
 					diff=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
-					}
+				}
 				arrModifiedLines.add(sumOfDelLines-diff);
 				diff=0;
-				
+
 				fullFilePath=tokens[2];
+
+				modifiedFilesOFCommit.add(fullFilePath.concat(" "));//ci servirà dopo per il calcolo di NDEV
+
 				//split del pathname (la divisione avviene al primo src trovato nel path)
 				String[] parts = fullFilePath.split("src",2);
 				subSystem = parts[0];
@@ -375,7 +407,7 @@ public class Main {
 				if (!arrSubSystemList.contains(subSystem)){
 					arrSubSystemList.add(subSystem);
 				}
-				
+
 				//ora levo il nome del file per avere la directory
 				i = parts[1].lastIndexOf("/");
 				directory =  parts[1].substring(0, i);
@@ -384,26 +416,26 @@ public class Main {
 				}
 				nextLine =br.readLine();
 			}
-			
+
 			lineOfCommit = new LineOfCommitDataset(Integer.parseInt(version), commit);
 			lineOfCommit.setLineAdded(realAddedLines);
 			lineOfCommit.setLineDeleted(realDeletedLOC);
 			lineOfCommit.setNumModFiles(numFile);
 			lineOfCommit.setNumModDir(arrDirList.size());
 			lineOfCommit.setNumModSub(arrSubSystemList.size());
-			
+
 			for (int j = 0; j < arrModifiedLines.size(); j++) {
-			sumModifiedLines += arrModifiedLines.get(j); 	
+				sumModifiedLines += arrModifiedLines.get(j); 	
 			} 
-			
+
 			for (int j = 0; j < arrModifiedLines.size(); j++) {
 				entropy+=(double)((((double)arrModifiedLines.get(j)*(-1))/(double)sumModifiedLines))*
-				(Math.log((double)arrModifiedLines.get(j)/(double)sumModifiedLines)
-				/(double) Math.log(2)); 	
-				} 
-			
+						(Math.log((double)arrModifiedLines.get(j)/(double)sumModifiedLines)
+								/(double) Math.log(2)); 	
+			} 
+
 			lineOfCommit.setEntropy(entropy);
-			
+
 			arrModifiedLines.clear();
 			arrSubSystemList.clear();
 			arrDirList.clear();
@@ -458,7 +490,6 @@ public class Main {
 			}
 
 		}
-
 
 
 
@@ -961,7 +992,7 @@ public class Main {
 			return String.valueOf(fromReleaseIndexToDate.size());
 		}
 
-		private void calculatingNauth(String line, BufferedReader br) throws IOException {
+		private void calculatingNauthClassLevel(String line, BufferedReader br) throws IOException {
 			String nextLine;
 			int version;
 			String filename = "";
@@ -985,7 +1016,7 @@ public class Main {
 
 		}
 
-		private void getAgeMetrics(String line, BufferedReader br) throws IOException{
+		private void getAgeMetricsClassLevel(String line, BufferedReader br) throws IOException{
 
 			String filename;
 			String version;
@@ -1160,34 +1191,36 @@ public class Main {
 					maxAddedlines,realAddedLinesOverCommit,modified,average,numberOfCommit,
 					addedLines-deletedLines,maxChurn,avgChurn);
 		}
-	}
 
-	private static void calculateNotIncrementalMetricsPart2(String version,String filename,
-			int sumOfRealDeletedLOC,int maxAddedlines,ArrayList<Integer> addedLinesForEveryRevision
-			,int modified,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
-		int totalAdded=0;
+		private static void calculateNotIncrementalMetricsPart2(String version,String filename,
+				int sumOfRealDeletedLOC,int maxAddedlines,ArrayList<Integer> addedLinesForEveryRevision
+				,int modified,int average, int numOfCommit, int churn,int maxChurn,int avgChurn) {
+			int totalAdded=0;
 
-		lineOfClassDataset.setMAXLOCAdded(maxAddedlines);
-		lineOfClassDataset.setNR(numOfCommit);
-		lineOfClassDataset.setChurn(Math.max(churn, 0));
-		lineOfClassDataset.setMaxChurn(maxChurn);
-		lineOfClassDataset.setAVGChurn(avgChurn);
+			lineOfClassDataset.setMAXLOCAdded(maxAddedlines);
+			lineOfClassDataset.setNR(numOfCommit);
+			lineOfClassDataset.setChurn(Math.max(churn, 0));
+			lineOfClassDataset.setMaxChurn(maxChurn);
+			lineOfClassDataset.setAVGChurn(avgChurn);
 
-		//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
-		for(int n=0; n<addedLinesForEveryRevision.size(); n++){
+			//per il AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
+			for(int n=0; n<addedLinesForEveryRevision.size(); n++){
 
-			totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
+				totalAdded = totalAdded + addedLinesForEveryRevision.get(n);
+
+			}
+			if (totalAdded>0) {
+				average = Math.floorDiv(totalAdded,addedLinesForEveryRevision.size());
+			}
+			//--------------------------------------------------
+			lineOfClassDataset.setAVGLOCAdded(average);
+			lineOfClassDataset.setLOCAdded(totalAdded);
+			lineOfClassDataset.setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
 
 		}
-		if (totalAdded>0) {
-			average = Math.floorDiv(totalAdded,addedLinesForEveryRevision.size());
-		}
-		//--------------------------------------------------
-		lineOfClassDataset.setAVGLOCAdded(average);
-		lineOfClassDataset.setLOCAdded(totalAdded);
-		lineOfClassDataset.setLOCTouched(totalAdded+sumOfRealDeletedLOC+modified);
-
 	}
+
+
 
 
 
@@ -1316,7 +1349,7 @@ public class Main {
 
 	}
 
-	private static void getNumberOfAuthors(String filename, Integer i) {
+	private static void getNumberOfAuthorsClassLevel(String filename, Integer i) {
 
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
@@ -1357,6 +1390,7 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
+
 	private static void getNumberOfAuthorsOfMetod(String method, Integer version) {
 
 		//directory da cui far partire il comando git    
@@ -1974,38 +2008,7 @@ public class Main {
 		return String.valueOf(releases.size());
 	}
 
-	private static void calculateMetrics(int version) {
 
-
-
-		//per ogni file nella release (version)
-		for (String s : filepathsOfTheCurrentRelease) {
-
-			calculatingIncrementalMetrics = true;
-			//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
-			getLOCMetric(s,version);
-			calculatingIncrementalMetrics = false;
-			calculatingNotIncrementalMetrics = true;
-			//i metodi successivi modificano semplicemente le entry in quell'array
-			getNotIncrementalMetrics(s,version);
-			calculatingNotIncrementalMetrics = false;
-			calculatingNAuth= true;
-			getNumberOfAuthors(s,version);
-			calculatingNAuth= false;
-
-			calculatingAge=true;
-			getAgeMetrics(s,version);
-			calculatingAge=false;
-
-			calculatingChgSetSizePhaseOne=true;
-			getChgSetMetrics(s,version);
-			calculatingChgSetSizePhaseOne=false;
-
-		}
-		System.out.println("########## Evaluated metrics for version "+version+"############");
-
-
-	}
 
 	//questo metodo lancia un processo che calcola le metriche ChgSet-based 
 	private static void getChgSetMetrics(String filename, int version) {
@@ -2182,7 +2185,7 @@ public class Main {
 				searchFileJava(folder, filepathsOfTheCurrentRelease);
 				System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
-				calculateMetrics(i);
+				calculateClassMetrics(i);
 				filepathsOfTheCurrentRelease.clear();
 			}
 
@@ -2251,7 +2254,8 @@ public class Main {
 		if(studyCommitMetrics) {
 
 			commitOfCurrentRelease = new ArrayList<>();
-			arrayOfEntryOfCommitDataset = new ArrayList<LineOfCommitDataset>();
+			arrayOfEntryOfCommitDataset = new ArrayList<>();
+			modifiedFilesOFCommit = new ArrayList<>();
 
 			//per ogni versione nella primà metà delle release
 			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
@@ -2366,7 +2370,38 @@ public class Main {
 		 */
 	}
 
+	private static void calculateClassMetrics(int version) {
 
+
+
+		//per ogni file nella release (version)
+		for (String s : filepathsOfTheCurrentRelease) {
+
+			calculatingIncrementalMetrics = true;
+			//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
+			getLOCMetric(s,version);
+			calculatingIncrementalMetrics = false;
+			calculatingNotIncrementalMetrics = true;
+			//i metodi successivi modificano semplicemente le entry in quell'array
+			getNotIncrementalMetrics(s,version);
+			calculatingNotIncrementalMetrics = false;
+			calculatingAuthClassLevel= true;
+			getNumberOfAuthorsClassLevel(s,version);
+			calculatingAuthClassLevel= false;
+
+			calculatingAge=true;
+			getAgeMetrics(s,version);
+			calculatingAge=false;
+
+			calculatingChgSetSizePhaseOne=true;
+			getChgSetMetrics(s,version);
+			calculatingChgSetSizePhaseOne=false;
+
+		}
+		System.out.println("########## Evaluated metrics for version "+version+"############");
+
+
+	}
 
 
 
@@ -2394,6 +2429,26 @@ public class Main {
 			calculatingAuthMetricMethodLevel=true;
 			getNumberOfAuthorsOfMetod( method,version);
 			calculatingAuthMetricMethodLevel=false;
+		}
+	}
+	
+	private static void calculateCommitMetrics(int version) {
+
+		int count=0;
+		//per ogni commit nella release (version)
+		for (String commit : commitOfCurrentRelease) {
+			count++;
+
+			calculatingFirstHalfCommitMetrics = true;
+			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
+			searchFirstHalfCommitMetrics(version,commit);
+			calculatingFirstHalfCommitMetrics = false;
+
+			calculatingAuthMetricCommitLevel=true;
+			getNumberOfAuthorsOfCommit( commit,version);
+			calculatingAuthMetricCommitLevel=false;
+
+			modifiedFilesOFCommit.clear();
 		}
 	}
 
@@ -2516,31 +2571,7 @@ public class Main {
 		}
 	}
 
-	private static void calculateCommitMetrics(int version) {
-
-		int count=0;
-		//per ogni commit nella release (version)
-		for (String commit : commitOfCurrentRelease) {
-			count++;
-
-			calculatingFirstHalfCommitMetrics = true;
-			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
-			searchFirstHalfCommitMetrics(version,commit);
-			calculatingFirstHalfCommitMetrics = false;
-
-			/*calculatingElseMetricsMethodLevel=true;
-				getElseMetrics(method,version);
-				calculatingElseMetricsMethodLevel=false;
-
-				calculatingCondMetricMethodLevel=true;
-				getCondMetric(method,version);
-				calculatingCondMetricMethodLevel=false;
-
-				calculatingAuthMetricMethodLevel=true;
-				getNumberOfAuthorsOfMetod( method,version);
-				calculatingAuthMetricMethodLevel=false;*/
-		}
-	}
+	
 
 
 	private static void searchFirstHalfCommitMetrics(Integer version, String commit) {
@@ -2565,5 +2596,31 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 
+	}
+
+	//per ottenere il numero di commit per ogni autore che ha modificato i "modifiedFiles" fino al commit passato 
+	private static void getNumberOfAuthorsOfCommit(String commit, Integer version) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
+
+		try {
+			command = "git shortlog -sn "+commit+" -- ";
+			//aggiungo i nome dei file toccati dal commit in esame
+			for (int i = 0; i < modifiedFilesOFCommit.size(); i++) {
+				command.concat(modifiedFilesOFCommit.get(i));				
+			}
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
 	}
 }
