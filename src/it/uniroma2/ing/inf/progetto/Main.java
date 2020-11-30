@@ -71,6 +71,7 @@ public class Main {
 	private static List<String> modifiedFilesOfCommit; //lista statica dei file toccati dal commit in esame "lineofcommit"
 	private static List<String> modifiedSubOfCommit;  //lista statica dei subsystem toccati dal commit in esame "lineofcommit"
 	private static String authorOfCommit; //serve per EXP
+	private static List<Integer> listOfDaysPassedBetweenCommits; //serve per l'AGE
 
 	private static List<LineOfClassDataset> arrayOfEntryOfClassDataset;
 	private static List<LineOfMethodDataset> arrayOfEntryOfMethodDataset;
@@ -123,6 +124,7 @@ public class Main {
 	private static boolean calculatingAuthorOfCommit=false;
 	private static boolean calculatingTypeOfCommit=false;
 	private static boolean calculatingExp=false;
+	private static boolean calculatingFileAgeCommitLevel=false;
 
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
@@ -324,6 +326,9 @@ public class Main {
 					else if(calculatingExp) {
 						getExp(line,br);
 					}
+					else if(calculatingFileAgeCommitLevel) {
+						getFileAgeCommitLevel(line,br);
+					}
 					else {
 
 						System.out.println(line);
@@ -339,8 +344,49 @@ public class Main {
 		}
 
 
+		private void getFileAgeCommitLevel(String line, BufferedReader br) throws IOException{
+
+			String nextLine;
+			int age=0;
+			int count=0;
+			LocalDate lastDateCommit = null;
+			LocalDate DateCommit = null;
+
+			line=line.trim();
+			//"one or more whitespaces = \\s+"
+			String[] tokens = line.split("\\s+");
+
+			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
+
+			//il primo output è la data del commit attuale ------------------------------
+			DateCommit = LocalDate.parse(tokens[0],format);
+
+			//lettura prox riga					      					      
+			nextLine =br.readLine();
+
+			//il secondo output è la data del commit precedente (potrebbe non esistere)
+			while (nextLine != null) {
+				count++;
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+
+				lastDateCommit = LocalDate.parse(tokens[0],format);
+				nextLine =br.readLine();
+			}
+			//primo commit nella storia del file
+			if (count==0) {
+				listOfDaysPassedBetweenCommits.add(count);
+			}
+			else {
+				
+				age= Math.toIntExact(ChronoUnit.DAYS.between(lastDateCommit,DateCommit));
+
+				listOfDaysPassedBetweenCommits.add(age);
+			}
+		}
+
 		private void getExp(String line, BufferedReader br) throws IOException {
-			
+
 			String nextLine;
 			int numCommit=0;
 
@@ -483,7 +529,7 @@ public class Main {
 				fullFilePath=tokens[2];
 
 				modifiedFilesOfCommit.add(fullFilePath.concat(" "));//ci servirà dopo per il calcolo di NDEV
-
+                
 				//split del pathname (la divisione avviene al primo src trovato nel path)
 				String[] parts = fullFilePath.split("/src/",2);
 				subSystem = parts[0];
@@ -2342,6 +2388,7 @@ public class Main {
 			arrayOfEntryOfCommitDataset = new ArrayList<>();
 			modifiedFilesOfCommit = new ArrayList<>();
 			modifiedSubOfCommit= new ArrayList<>();
+			listOfDaysPassedBetweenCommits=new ArrayList<>();
 
 			//per ogni versione nella primà metà delle release
 			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
@@ -2539,7 +2586,7 @@ public class Main {
 			calculatingAuthorOfCommit=false;
 
 			/*calculatingTypeOfCommit=true;
-             getTypeOfCommit(commit);
+             getTypeOfCommit(commit); da fare dopo
 			calculatingTypeOfCommit=false;*/
 
 			calculatingSexp=true;
@@ -2550,6 +2597,20 @@ public class Main {
 			getExpCommitLevel(commit);
 			calculatingExp=false;
 
+			
+			//ora per le metriche AGE e REXP  -----------------
+			//per ogni file occorre calcolare la data dell'ultimo commit avvenuto
+			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
+				calculatingFileAgeCommitLevel=true;
+				getAgeCommitLevelOfFile(commit,modifiedFilesOfCommit.get(i));
+				calculatingFileAgeCommitLevel=false;	
+			}
+
+			//questo metodo utilizzerà dati condivisi per settare l'age di lineOfCommit 
+			calculateAgeCommitLevel();
+
+			//--------------------------------
+			listOfDaysPassedBetweenCommits.clear();
 			modifiedFilesOfCommit.clear();
 			modifiedSubOfCommit.clear();
 		}
@@ -2683,10 +2744,10 @@ public class Main {
 		String command;
 
 		try {    
-			//ritorna release e commit id, poi righe aggiunte, elimiante e nome del file java modificato
-			command = ECHO+version+" "+commit+" && git show "+FORMATNUMSTAT
-					+commit+"  -- *.java";	
-
+			//ritorna release e commit id, poi righe aggiunte, eliminate e nome del file java modificato
+			command = ECHO+version+" "+commit+" && git show  --format= --numstat "
+					+commit+" --no-renames -- *.java";	
+          
 			runCommandOnShell(directory, command);
 
 		} catch (IOException e) {
@@ -2725,8 +2786,8 @@ public class Main {
 		}
 	}
 
-	/*private static void getTypeOfCommit(String commit) {
-
+	private static void getTypeOfCommit(String commit) {
+/*
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
 				SLASH+projectName);
@@ -2744,8 +2805,8 @@ public class Main {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 			Thread.currentThread().interrupt();
-		}
-	}*/
+		}*/
+	}
 
 	private static void getAuthorOfCommit(String commit) {
 
@@ -2769,7 +2830,7 @@ public class Main {
 		}
 	}
 
-	
+
 	//per ottenere il numero di commit dell'author rigurdanti i "subsystem" fino al commit passato 
 	private static void getSexpCommitLevel(String commit) {
 
@@ -2795,26 +2856,59 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
-	
+
 	//per ottenere il numero di commit dell'author nel progetto fino al commit passato 
-		private static void getExpCommitLevel(String commit) {
+	private static void getExpCommitLevel(String commit) {
 
-			//directory da cui far partire il comando git    
-			Path directory = Paths.get(new File("").getAbsolutePath()+
-					SLASH+projectName);
-			String command;
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
 
-			try {
-				command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\"";
-				
-				runCommandOnShell(directory, command);
+		try {
+			command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\"";
 
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				Thread.currentThread().interrupt();
-			}
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
 		}
+	}
+
+	//occorre calcolare la data dell'ultimo commit avvenuto sul file 
+	private static void getAgeCommitLevelOfFile(String commit,String file) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
+
+		//si printa la data del commit passato e anche del commit precedente
+		try {
+			command = "git log --date=short -2 "+commit+" --format=%cd -- "+file+"";
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+	
+	//qui si fa la media dei giorni passati dall'ultimo commit tra tutti i file e si setta il valore della metrica
+	private static void calculateAgeCommitLevel(){
+		int age=0;
+		 for (int i = 0; i < listOfDaysPassedBetweenCommits.size(); i++) {
+			 age+=listOfDaysPassedBetweenCommits.get(i);	
+		}
+		 age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
+		 lineOfCommit.setAge(age);
+	}
 }
