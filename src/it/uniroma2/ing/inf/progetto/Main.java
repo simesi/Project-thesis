@@ -119,8 +119,10 @@ public class Main {
 	private static boolean calculatingCommitInRelease=false;
 	private static boolean calculatingFirstHalfCommitMetrics=false;
 	private static boolean calculatingNumDevAndNucMetricCommitLevel=false;
-	private static boolean  calculatingSexp=false;
+	private static boolean calculatingSexp=false;
 	private static boolean calculatingAuthorOfCommit=false;
+	private static boolean calculatingTypeOfCommit=false;
+	private static boolean calculatingExp=false;
 
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
@@ -319,6 +321,9 @@ public class Main {
 					else if(calculatingSexp) {
 						getSexp(line,br);
 					}
+					else if(calculatingExp) {
+						getExp(line,br);
+					}
 					else {
 
 						System.out.println(line);
@@ -334,7 +339,7 @@ public class Main {
 		}
 
 
-		private void getSexp(String line, BufferedReader br) throws IOException {
+		private void getExp(String line, BufferedReader br) throws IOException {
 			
 			String nextLine;
 			int numCommit=0;
@@ -351,12 +356,36 @@ public class Main {
 				nextLine=nextLine.trim();
 				tokens = line.split("\\s+");
 				numCommit+=Integer.parseInt(tokens[0]);
-				
+
+				nextLine =br.readLine();
+			}
+
+			lineOfCommit.setExp(numCommit);
+		}
+
+		private void getSexp(String line, BufferedReader br) throws IOException {
+
+			String nextLine;
+			int numCommit=0;
+
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+
+			numCommit+=Integer.parseInt(tokens[0]);
+
+			nextLine =br.readLine();
+
+
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				tokens = line.split("\\s+");
+				numCommit+=Integer.parseInt(tokens[0]);
+
 				nextLine =br.readLine();
 			}
 
 			lineOfCommit.setSubExp(numCommit);
-			 
+
 		}
 
 		private void getAuthor(String line, BufferedReader br) throws IOException{
@@ -2509,10 +2538,17 @@ public class Main {
 			getAuthorOfCommit(commit);
 			calculatingAuthorOfCommit=false;
 
+			/*calculatingTypeOfCommit=true;
+             getTypeOfCommit(commit);
+			calculatingTypeOfCommit=false;*/
+
 			calculatingSexp=true;
 			getSexpCommitLevel(commit);
 			calculatingSexp=false;
 
+			calculatingExp=true;
+			getExpCommitLevel(commit);
+			calculatingExp=false;
 
 			modifiedFilesOfCommit.clear();
 			modifiedSubOfCommit.clear();
@@ -2689,7 +2725,27 @@ public class Main {
 		}
 	}
 
-	
+	/*private static void getTypeOfCommit(String commit) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
+
+		try {    
+			//ritorna l'autore del commit 
+			command = "git shortlog -s "+commit+"^! --grep=\""+\\\" ";	
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}*/
 
 	private static void getAuthorOfCommit(String commit) {
 
@@ -2712,9 +2768,36 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
+
 	
 	//per ottenere il numero di commit dell'author rigurdanti i "subsystem" fino al commit passato 
-		private static void getSexpCommitLevel(String commit) {
+	private static void getSexpCommitLevel(String commit) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
+
+		try {
+			command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\" -- ";
+			//aggiungo i nome dei file toccati dal commit in esame
+			for (int i = 0; i < modifiedSubOfCommit.size(); i++) {
+				command.concat(modifiedSubOfCommit.get(i));				
+			}
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+	
+	//per ottenere il numero di commit dell'author nel progetto fino al commit passato 
+		private static void getExpCommitLevel(String commit) {
 
 			//directory da cui far partire il comando git    
 			Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -2722,12 +2805,8 @@ public class Main {
 			String command;
 
 			try {
-				command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\" -- ";
-				//aggiungo i nome dei file toccati dal commit in esame
-				for (int i = 0; i < modifiedSubOfCommit.size(); i++) {
-					command.concat(modifiedSubOfCommit.get(i));				
-				}
-
+				command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\"";
+				
 				runCommandOnShell(directory, command);
 
 			} catch (IOException e) {
