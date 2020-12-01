@@ -16,7 +16,7 @@ public class LineOfCommitDataset {
 	private int age;
 	private int nuc;
 	private int exp;
-	private int recentExp;
+	private double recentExp;
 	private int subExp;
 	private String bugIntroducing= "NO";
 	
@@ -180,13 +180,13 @@ public class LineOfCommitDataset {
 	/**
 	 * @return the recentExp
 	 */
-	public int getRecentExp() {
+	public double getRecentExp() {
 		return recentExp;
 	}
 	/**
 	 * @param recentExp the recentExp to set
 	 */
-	public void setRecentExp(int recentExp) {
+	public void setRecentExp(double recentExp) {
 		this.recentExp = recentExp;
 	}
 	/**

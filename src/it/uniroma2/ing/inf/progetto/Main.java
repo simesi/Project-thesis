@@ -108,9 +108,9 @@ public class Main {
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
 	private static final String FINER_GIT="_FinerGit_";
 
-	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
+	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
 
 	private static boolean calculatingStmtMetricsMethodLevel=false;
 	private static boolean calculatingElseMetricsMethodLevel=false;
@@ -125,6 +125,8 @@ public class Main {
 	private static boolean calculatingTypeOfCommit=false;
 	private static boolean calculatingExp=false;
 	private static boolean calculatingFileAgeCommitLevel=false;
+	private static boolean calculatingRecExp=false;
+	private static boolean calculatingLOCBeforeCommit=false;
 
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
@@ -329,6 +331,12 @@ public class Main {
 					else if(calculatingFileAgeCommitLevel) {
 						getFileAgeCommitLevel(line,br);
 					}
+					else if(calculatingRecExp) {
+						getRecentExpCommitLevel(line,br);
+					}
+					else if(calculatingLOCBeforeCommit) {
+						getLOCBeforeCommitOfAFile(line,br);
+					}
 					else {
 
 						System.out.println(line);
@@ -343,6 +351,69 @@ public class Main {
 
 		}
 
+
+		private void getLOCBeforeCommitOfAFile(String line, BufferedReader br) throws IOException{
+			String nextLine;
+			int addedLines=0;
+			int deletedLines=0;
+			String[] tokens;
+			
+			//il primo output lo scartiamo perchè sono le righe modificate dal commit attuale..
+			
+			//lettura prox riga					      					      
+			nextLine =br.readLine();
+
+			while (nextLine != null) {
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+				//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
+				addedLines=addedLines+Integer.parseInt(tokens[0]);
+				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
+				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
+				
+				nextLine =br.readLine();
+			}
+			//si modifica solo se si ha un valore maggiore del precedente
+		   lineOfCommit.setLineBeforeChange(Math.max(lineOfCommit.getLineBeforeChange(),addedLines-deletedLines ));		
+			
+		}
+
+		private void getRecentExpCommitLevel(String line, BufferedReader br) throws IOException{
+			
+			String nextLine;
+			int years=0;
+			double recExp=0;
+			LocalDate DateCommit = null;
+			LocalDate actualDateCommit = null;
+
+			line=line.trim();
+			//"one or more whitespaces = \\s+"
+			String[] tokens = line.split("\\s+");
+
+			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
+
+			//il primo output è la data del commit attuale ------------------------------
+			actualDateCommit = LocalDate.parse(tokens[0],format);
+
+			//lettura prox riga					      					      
+			nextLine =br.readLine();
+
+			//i prossimi output sono la data dei commit precedenti (potrebbero non esserci)
+			while (nextLine != null) {
+				
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+
+				DateCommit = LocalDate.parse(tokens[0],format);
+				years= Math.toIntExact(ChronoUnit.YEARS.between(DateCommit,actualDateCommit));
+				recExp+= (double)1/(double)(years+1);
+				
+				nextLine =br.readLine();
+			}
+						
+				lineOfCommit.setRecentExp(recExp);
+			
+		}
 
 		private void getFileAgeCommitLevel(String line, BufferedReader br) throws IOException{
 
@@ -449,6 +520,8 @@ public class Main {
 
 			authorOfCommit=myAuthor; 
 		}
+		
+		
 		private void getNumDevCommitLevel(String line, BufferedReader br) throws IOException {
 			String nextLine;
 			int nDev=1;
@@ -2038,7 +2111,7 @@ public class Main {
 					+ "&fields=key,created,versions&startAt="
 					+ i.toString() + MAX_RESULT + j.toString();
 
-
+            System.out.println(url);
 			json = readJsonFromUrl(url);
 			issues = json.getJSONArray(ISSUES);
 			//ci si prende il numero totale di ticket recuperati
@@ -2584,7 +2657,7 @@ public class Main {
 			calculatingAuthorOfCommit=true;
 			getAuthorOfCommit(commit);
 			calculatingAuthorOfCommit=false;
-
+ 			
 			/*calculatingTypeOfCommit=true;
              getTypeOfCommit(commit); da fare dopo
 			calculatingTypeOfCommit=false;*/
@@ -2603,12 +2676,22 @@ public class Main {
 			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
 				calculatingFileAgeCommitLevel=true;
 				getAgeCommitLevelOfFile(commit,modifiedFilesOfCommit.get(i));
-				calculatingFileAgeCommitLevel=false;	
+				calculatingFileAgeCommitLevel=false;
+				
+				calculatingLOCBeforeCommit=true;
+				getLinesOfCodeOfFileBeforeCommit(commit,modifiedFilesOfCommit.get(i));
+				calculatingLOCBeforeCommit=false;
 			}
 
 			//questo metodo utilizzerà dati condivisi per settare l'age di lineOfCommit 
 			calculateAgeCommitLevel();
+			
+			calculatingRecExp=true;
+			getRecExpCommitLevel(commit);
+			calculatingRecExp=false;
 
+			arrayOfEntryOfCommitDataset.add(lineOfCommit);
+			
 			//--------------------------------
 			listOfDaysPassedBetweenCommits.clear();
 			modifiedFilesOfCommit.clear();
@@ -2889,7 +2972,7 @@ public class Main {
 
 		//si printa la data del commit passato e anche del commit precedente
 		try {
-			command = "git log --date=short -2 "+commit+" --format=%cd -- "+file+"";
+			command = "git log --date=short -2 "+commit+" --format=%ad -- "+file+"";
 
 			runCommandOnShell(directory, command);
 
@@ -2911,4 +2994,50 @@ public class Main {
 		 age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
 		 lineOfCommit.setAge(age);
 	}
+	
+	//per ottenere le date dei commit dell'author nel progetto fino al commit passato 
+		private static void getRecExpCommitLevel(String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {
+				command = "git log --date=short "+commit+" --author=\""+authorOfCommit+"\" --format=%ad";
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+		
+		//per ottenere le linee di codice fino a quel commit (incluso) del file passato
+		private static void getLinesOfCodeOfFileBeforeCommit(String commit, String filename) {
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			String command;
+
+			// git log [commit] --format= --numstat -- [filename]
+
+			try {
+
+				command ="git log "+commit+FORMATNUMSTAT+filename;	
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+
+		}
 }
