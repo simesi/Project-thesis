@@ -5,9 +5,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URL;
-import java.nio.channels.NonReadableChannelException;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -65,7 +65,6 @@ public class Main {
 	public static List<LocalDateTime> releases;
 	private static Map<String,LocalDateTime> fromReleaseIndexToDate=new HashMap<>();
 	private static List<TicketTakenFromJIRA> tickets;
-	private static List<TicketTakenFromJIRA> ticketsWithoutAV;
 	private static List<Integer> chgSetSizeList; //questa variabile è modificata dai thread per tenere traccia
 	//del numero di files committati insieme
 	private static List<String> modifiedFilesOfCommit; //lista statica dei file toccati dal commit in esame "lineofcommit"
@@ -87,10 +86,10 @@ public class Main {
 	private static boolean calculatingAuthClassLevel=false;
 	private static boolean calculatingChgSetSizePhaseOne=false;
 	private static boolean calculatingChgSetSizePhaseTwo=false;
-	private static boolean gettingLastCommit=false;
+	private static boolean getNFixAtClassLevelMetric=false;
 	private static boolean calculatingAge=false;
-	private static boolean ticketWithAV= false;
-	private static boolean ticketWithoutAV= false;
+
+
 
 	private static final String ECHO = "echo "; 
 	private static final String VERSIONS = "versions";
@@ -108,9 +107,9 @@ public class Main {
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
 	private static final String FINER_GIT="_FinerGit_";
 
-	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
+	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=true;; //calcola le metriche di commit
 
 	private static boolean calculatingStmtMetricsMethodLevel=false;
 	private static boolean calculatingElseMetricsMethodLevel=false;
@@ -131,6 +130,7 @@ public class Main {
 	private static LineOfMethodDataset lineOfMethod;
 	private static LineOfClassDataset lineOfClassDataset;
 	private static LineOfCommitDataset lineOfCommit;
+	private static TicketTakenFromJIRA ticket;
 
 	//--------------------------
 
@@ -294,8 +294,8 @@ public class Main {
 					else if (calculatingChgSetSizePhaseTwo) {
 						getFileCommittedTogheter(line,br);
 					}
-					// qui è per il set di "buggy"
-					else if (gettingLastCommit) {
+					// qui è per il set della metrica Nfix
+					else if (getNFixAtClassLevelMetric) {
 						gettingLastCommit(line,br);
 					}
 					else if (calculatingStmtMetricsMethodLevel) {
@@ -337,6 +337,9 @@ public class Main {
 					else if(calculatingLOCBeforeCommit) {
 						getLOCBeforeCommitOfAFile(line,br);
 					}
+					else if(calculatingTypeOfCommit) {
+						getFixMetricAtCommitLevel(line,br);
+					}
 					else {
 
 						System.out.println(line);
@@ -352,14 +355,46 @@ public class Main {
 		}
 
 
+		private void getFixMetricAtCommitLevel(String line, BufferedReader br)  throws IOException{
+
+			String nextLine;
+			line=line.trim();
+			String[] tokens = line.split("\\s+");
+			String bug= tokens[0];
+			List<String> commitsList= new ArrayList<>();
+
+			//ora prendo la data di ogni fix commit
+			nextLine =br.readLine();
+
+			//non c'è un commit con questo id quindi non scrivo nulla
+			if(nextLine==null) {
+				return;
+			}
+			nextLine=nextLine.trim();
+
+			//popolo lista con i commit id dei fix commit sul bug
+			commitsList.add(nextLine);
+
+			//ora si continua in caso di altri fix commit 
+			nextLine =br.readLine();
+
+			while(nextLine != null) {
+				nextLine=nextLine.trim();
+				commitsList.add(nextLine);
+				nextLine =br.readLine();
+			}
+			ticket.setFixCommitList(commitsList);
+
+		}
+
 		private void getLOCBeforeCommitOfAFile(String line, BufferedReader br) throws IOException{
 			String nextLine;
 			int addedLines=0;
 			int deletedLines=0;
 			String[] tokens;
-			
+
 			//il primo output lo scartiamo perchè sono le righe modificate dal commit attuale..
-			
+
 			//lettura prox riga					      					      
 			nextLine =br.readLine();
 
@@ -370,16 +405,16 @@ public class Main {
 				addedLines=addedLines+Integer.parseInt(tokens[0]);
 				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
 				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
-				
+
 				nextLine =br.readLine();
 			}
 			//si modifica solo se si ha un valore maggiore del precedente
-		   lineOfCommit.setLineBeforeChange(Math.max(lineOfCommit.getLineBeforeChange(),addedLines-deletedLines ));		
-			
+			lineOfCommit.setLineBeforeChange(Math.max(lineOfCommit.getLineBeforeChange(),addedLines-deletedLines ));		
+
 		}
 
 		private void getRecentExpCommitLevel(String line, BufferedReader br) throws IOException{
-			
+
 			String nextLine;
 			int years=0;
 			double recExp=0;
@@ -400,19 +435,19 @@ public class Main {
 
 			//i prossimi output sono la data dei commit precedenti (potrebbero non esserci)
 			while (nextLine != null) {
-				
+
 				nextLine=nextLine.trim();
 				tokens=nextLine.split("\\s+");
 
 				DateCommit = LocalDate.parse(tokens[0],format);
 				years= Math.toIntExact(ChronoUnit.YEARS.between(DateCommit,actualDateCommit));
 				recExp+= (double)1/(double)(years+1);
-				
+
 				nextLine =br.readLine();
 			}
-						
-				lineOfCommit.setRecentExp(recExp);
-			
+
+			lineOfCommit.setRecentExp(recExp);
+
 		}
 
 		private void getFileAgeCommitLevel(String line, BufferedReader br) throws IOException{
@@ -449,7 +484,7 @@ public class Main {
 				listOfDaysPassedBetweenCommits.add(count);
 			}
 			else {
-				
+
 				age= Math.toIntExact(ChronoUnit.DAYS.between(lastDateCommit,DateCommit));
 
 				listOfDaysPassedBetweenCommits.add(age);
@@ -520,8 +555,8 @@ public class Main {
 
 			authorOfCommit=myAuthor; 
 		}
-		
-		
+
+
 		private void getNumDevCommitLevel(String line, BufferedReader br) throws IOException {
 			String nextLine;
 			int nDev=1;
@@ -602,7 +637,7 @@ public class Main {
 				fullFilePath=tokens[2];
 
 				modifiedFilesOfCommit.add(fullFilePath.concat(" "));//ci servirà dopo per il calcolo di NDEV
-                
+
 				//split del pathname (la divisione avviene al primo src trovato nel path)
 				String[] parts = fullFilePath.split("/src/",2);
 				subSystem = parts[0];
@@ -1105,79 +1140,50 @@ public class Main {
 				nextLine =br.readLine();
 			}
 
-			if(ticketWithAV) {
-				setFixedVersionAndSetNFixMetric(bug,date,filesAffected);
-			}
-			else if(ticketWithoutAV) {
-				setFixVersionWithoutAv(bug,date,filesAffected);
-			}
-
+			setFixedVersionAndSetNFixMetric(bug,date,filesAffected);
 
 		}
 
-		private void setFixVersionWithoutAv(String bug, LocalDate date, ArrayList<String> filesAffected) {
-			String fixedVers;
-			for (int i = 0; i < tickets.size(); i++) {
-				if(ticketsWithoutAV.get(i).getKey().equals(bug)) {
-					//se è la prima versione
-					if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
-						fixedVers= String.valueOf(2);
-					}
-					else {
-						fixedVers=iterateForFixVersion(date);
 
-					}
-					ticketsWithoutAV.get(i).setFixedVersion(fixedVers);
-					ticketsWithoutAV.get(i).setFilenames(filesAffected);
-					break;
-
-				}
-			}
-
-		}
 
 		private void setFixedVersionAndSetNFixMetric(String bug,LocalDate date,ArrayList<String> filesAffected) {
 			String fixedVers;
 			int count=0;
-			for (int i = 0; i < tickets.size(); i++) {
-				if(tickets.get(i).getKey().equals(bug)) {
-					//se è la prima versione
-					if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
-						fixedVers= String.valueOf(2);
-					}
-					else {
-						fixedVers=iterateForFixVersion(date);
-					}
 
-					//set della metrica NFix
-					for (int n = 0; n < arrayOfEntryOfClassDataset.size(); n++) {  
-						//si aggiunge un'unità al numero di bug fixed in base alla versione associata
-						if(filesAffected.contains(arrayOfEntryOfClassDataset.get(i).getFileName())) {
+			//se è la prima versione
+			if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
+				fixedVers= String.valueOf(2);
+			}
+			else {
+				fixedVers=iterateForFixVersion(date);
+			}
 
-							//aumento contatore in modo da fermare il ciclo una volta osservate tutte le entry
-							// di quel file per tutte le versioni 
-							count++;
+			//set della metrica NFix --------------------------------------
+			for (int n = 0; n < arrayOfEntryOfClassDataset.size(); n++) {  
+				//si aggiunge un'unità al numero di bug fixed in base alla versione associata
+				if(filesAffected.contains(arrayOfEntryOfClassDataset.get(n).getFileName())) {
 
-							if (arrayOfEntryOfClassDataset.get(n).getVersion()>=Integer.parseInt(fixedVers)) {
-								arrayOfEntryOfClassDataset.get(n).setnFix(arrayOfEntryOfClassDataset.get(n).getnFix()+1);
-							}
+					//aumento contatore in modo da fermare il ciclo una volta osservate tutte le entry
+					// di quel file per tutte le versioni 
+					count++;
 
-							//abbiamo controllato tutte le versioni del file
-							if(count==Math.floorDiv(fromReleaseIndexToDate.size(),2)) {
-								break;
-							}
-						}
+					if (arrayOfEntryOfClassDataset.get(n).getVersion()>=Integer.parseInt(fixedVers)) {
+						arrayOfEntryOfClassDataset.get(n).setnFix(arrayOfEntryOfClassDataset.get(n).getnFix()+1);
 					}
 
-					tickets.get(i).setFixedVersion(fixedVers);
-					tickets.get(i).setFilenames(filesAffected);
-					break;
+					//abbiamo controllato tutte le versioni del file
+					if(count==Math.floorDiv(fromReleaseIndexToDate.size(),2)) {
+						break;
+					}
 				}
 			}
 
+			ticket.setFixedVersion(fixedVers);
+			return;
+
 		}
 
-		private String iterateForFixVersion(LocalDate date) {
+		private static String iterateForFixVersion(LocalDate date) {
 
 			for(int a=1;a<=fromReleaseIndexToDate.size();a++) {
 
@@ -1574,15 +1580,14 @@ public class Main {
 		}
 	}
 
-	private static void getLastCommitOfBug(String id) throws IOException, InterruptedException{
+	private static void getAllCommitOfBugFix(String id) throws IOException, InterruptedException{
 
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 		String command;
 
-		try {    //ritorna id bug, data dell'ultimo commit con quel bug nel commento e una lista di tutti i file java modificati
-			command= ECHO+id+" && git log --grep="+id+": -1 --date=short --pretty=format:%cd &&"
-					+ " git log --graph --pretty=format:%d --name-only --grep="+id+": -- *.java";
+		try {    //ritorna id bug, id commit con quel bug nel commento
+			command= ECHO+"\""+id+"\" && git log --grep="+id+": --pretty=format:%H -- *.java ";
 
 			runCommandOnShell(directory, command);
 
@@ -1730,51 +1735,13 @@ public class Main {
 	}
 
 
-
-	//metodo che computa P per la versione passata in ingresso con il metodo incrementale come "average among the defects fixed in previous versions"
-	private static int computeP(int i) {
-		int validBugsFixed=0;
-		int p=0;
-
-		//caso limite della prima versione
-		if(i==1) {
-			return 1;
-		}
-
-		// //ora si calcola P con il metodo proportion
-		for (TicketTakenFromJIRA ticket : tickets) {
-
-
-			//prendiamo solo i difetti fixed delle versioni passate
-			if(Integer.parseInt(ticket.getFixedVersion())>=i) {
-				continue;
-			}
-			validBugsFixed++;
-			p+=(Integer.parseInt(ticket.getFixedVersion())-Integer.parseInt(ticket.getAffectedVersion()))
-					/(Integer.parseInt(ticket.getFixedVersion())-Integer.parseInt(ticket.getCreatedVersion()));
-		}
-
-
-		if(validBugsFixed!=0) {
-			p=p/validBugsFixed;
-		}
-		else {
-			p=1;
-		}
-
-		if(p==0) {
-			return 1;
-		}
-		return p;
-	}
-
 	//--------------------------------------
 
 
 
 
 
-
+	//chiamato per Weka
 	private static void writePieceOfCsv(FileWriter fileWriter,String[] entry) throws IOException {
 
 		for(int n=0;n<=12;n++) {
@@ -1858,239 +1825,9 @@ public class Main {
 
 	}
 
-	private static void setBuggyWithoutAV() {
 
-		int i;
 
-		int predictedInjectedVersion;
-		int p;
-		//set della bugginess per i file dei ticket presi da JIRA
-		for (TicketTakenFromJIRA tick : ticketsWithoutAV) {
-
-			p=computeP(Integer.parseInt(tick.getFixedVersion()));
-			predictedInjectedVersion=(Integer.parseInt(tick.getFixedVersion())-(Integer.parseInt(tick.getFixedVersion())
-					-Integer.parseInt(tick.getCreatedVersion()))*p);
-
-			//per ogni file ritenuto buggy da quel ticket
-			for (String file : tick.getFilenames()) {
-				//cerca la inea giusta da scrivere
-				for (i=0;i< arrayOfEntryOfClassDataset.size();i++) {
-					if (arrayOfEntryOfClassDataset.get(i).getFileName().equals(file)
-							&&(arrayOfEntryOfClassDataset.get(i).getVersion()<Integer.parseInt(tick.getFixedVersion()))
-							&&arrayOfEntryOfClassDataset.get(i).getVersion()>= predictedInjectedVersion) {
-
-						arrayOfEntryOfClassDataset.get(i).setBuggy("YES");
-
-					}
-
-				}
-			}
-
-		}
-
-		ticketsWithoutAV.clear();
-		tickets.clear();
-
-
-	}
-
-	private static void checkFixedVersWithoutAV() throws IOException {
-
-		//ora si calcola la fixed version
-		gettingLastCommit=true;
-		ticketWithoutAV=true;
-		for (TicketTakenFromJIRA ticket : ticketsWithoutAV) {
-			//ora si prendono i commit su GIT associati a quei bug per ottenere la fixed version
-			try {
-
-				getLastCommitOfBug(ticket.getKey());
-
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				Thread.currentThread().interrupt();
-			}
-
-		}
-
-		gettingLastCommit=false;
-		ticketWithoutAV=false;
-
-		//rimuovo ticket senza file java o IV e OV inconsistenti
-		ArrayList<TicketTakenFromJIRA> ticketsWithoutAVToDelete = new ArrayList<>();	
-
-		for (TicketTakenFromJIRA ticket : ticketsWithoutAV) {
-			if((ticket.getCreatedVersion()==null)
-					||(ticket.getFixedVersion()==null)||ticket.getFilenames().size()==0){
-
-				ticketsWithoutAVToDelete.add(ticket);
-			}
-		}
-
-
-		//si eliminano i ticket selezionati prima
-		for (TicketTakenFromJIRA ticket : ticketsWithoutAVToDelete) {
-			ticketsWithoutAV.remove(ticket);
-		}
-		ticketsWithoutAVToDelete.clear();
-
-
-	}
-
-	private static void startToGetCreatedVersWithoutAV() throws JSONException, IOException {
-		Integer j=0;
-		Integer total=1;
-		JSONObject json ;
-		JSONArray issues;
-		Integer i=0;
-
-		//ora prendiamo da jira tutti i ticket di bug chiusi SENZA affected version
-
-		//inizio operazioni per calcolo bugginess
-		ticketsWithoutAV=new ArrayList<>();
-
-		//Get JSON API for ticket with Type == “Bug” AND (status == “Closed” OR status == “Resolved”) AND Resolution == “Fixed” AND affected version = null in the project
-		do {
-			//Only gets a max of 1000 at a time, so must do this multiple times if bugs >1000
-			j = i + 1000;
-
-			//%20 = spazio                      %22=virgolette
-			//Si ricavano tutti i ticket di tipo bug nello stato di risolto o chiuso, con risoluzione "fixed" e SENZA affected version.
-			String url = URLJIRA+ projectName + PIECE_OF_URL_JIRA+ "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22AND%22affectedVersion%22is%20EMPTY"
-					+ "%20AND%20updated%20%20%3E%20endOfYear(-"+YEARS_INTERVAL+")"
-					+ "&fields=key,created&startAt="
-					+ i.toString() + MAX_RESULT + j.toString();
-
-
-			json = readJsonFromUrl(url);
-			issues = json.getJSONArray(ISSUES);
-			//ci si prende il numero totale di ticket recuperati
-			total = json.getInt(TOTAL);
-
-			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
-
-			String createdVers=null;
-			LocalDate date;
-			TicketTakenFromJIRA tick;
-
-			// si itera sul numero di ticket
-			for (; i < total && i < j; i++) {
-
-				String key = issues.getJSONObject(i%1000).get("key").toString();
-				String createdDate= issues.getJSONObject(i%1000).getJSONObject(FIELDS).get("created").toString().substring(0,10);
-
-
-
-				date = LocalDate.parse(createdDate,format);
-
-				//se è la prima versione
-				if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
-					createdVers= String.valueOf(1);
-				}
-				else {
-					createdVers= finalizeGetCreatedVersionWithoutAv(date);
-				}
-
-				tick= new TicketTakenFromJIRA(key, createdVers, null);
-				ticketsWithoutAV.add(tick);
-
-			}  
-		} while (i < total);
-
-
-	}
-
-	private static String finalizeGetCreatedVersionWithoutAv(LocalDate date) {
-
-		for(int a=1;a<=fromReleaseIndexToDate.size();a++) {
-
-			//abbiamo raggiunto nel for l'ultima release
-			if(a==fromReleaseIndexToDate.size()) {
-				return  String.valueOf(a);
-
-			}
-
-			else if ((date.atStartOfDay().isAfter(fromReleaseIndexToDate.get(String.valueOf(a)))
-					&&(date.atStartOfDay().isBefore(fromReleaseIndexToDate.get(String.valueOf(a+1)))||
-							(date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(a+1))))))) {
-				return  String.valueOf(a+1);
-
-
-			}
-		}
-		return  String.valueOf(fromReleaseIndexToDate.size());
-	}
-
-	private static void setBuggy() {
-
-		int i;
-		gettingLastCommit=false;
-		ticketWithAV=false;
-
-		checkTicket();
-
-
-
-		//set della bugginess per i file dei ticket presi da JIRA
-		for (TicketTakenFromJIRA tick : tickets) {
-			//per ogni file ritenuto buggy da quel ticket
-			for (String file : tick.getFilenames()) {
-				//cerca la inea giusta da scrivere
-				for (i=0;i< arrayOfEntryOfClassDataset.size();i++) {
-					if (arrayOfEntryOfClassDataset.get(i).getFileName().equals(file)
-							&&(arrayOfEntryOfClassDataset.get(i).getVersion()<Integer.parseInt(tick.getFixedVersion()))
-							&&arrayOfEntryOfClassDataset.get(i).getVersion()>= Integer.parseInt(tick.getAffectedVersion())) {
-
-						arrayOfEntryOfClassDataset.get(i).setBuggy("YES");
-
-					}
-
-				}
-			}
-
-		}
-
-	}
-
-	private static void checkTicket() {
-		//rimuovo ticket senza file java o AV,IV e OV inconsistenti
-		ArrayList<TicketTakenFromJIRA> ticketsToDelete = new ArrayList<>();	
-
-		for (TicketTakenFromJIRA ticket : tickets) {
-			if((ticket.getAffectedVersion()==null)||(ticket.getCreatedVersion()==null)
-					||(ticket.getFixedVersion()==null)||ticket.getFilenames().size()==0){
-
-				ticketsToDelete.add(ticket);
-			}
-		}
-
-		//si eliminano i ticket selezionati prima
-		for (TicketTakenFromJIRA ticket : ticketsToDelete) {
-			tickets.remove(ticket);
-		}
-		ticketsToDelete.clear();
-
-	}
-
-	private static void startToGetFixedVersWithAV() throws IOException {
-		gettingLastCommit=true;
-		ticketWithAV=true;
-
-		for (TicketTakenFromJIRA ticket : tickets) {
-			//ora si prendono i commit su GIT associati a quei bug per ottenere la fixed version
-			try {
-
-				getLastCommitOfBug(ticket.getKey());
-
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				Thread.currentThread().interrupt();
-			}
-
-		}
-
-	}
-
-	private static void startToCalculateBugginessWithKnownAV() throws JSONException, IOException {
+	private static void startToGetBugFixCommitFromJira() throws JSONException, IOException {
 
 		//inizio operazioni per calcolo bugginess
 		tickets=new ArrayList<>();
@@ -2099,19 +1836,20 @@ public class Main {
 		JSONObject json ;
 		JSONArray issues;
 		Integer i=0;
-		//Get JSON API for ticket with Type == “Bug” AND (status == “Closed” OR status == “Resolved”) AND Resolution == “Fixed” AND affectedVersion != null in the project
+		//Get JSON API for ticket with Type == “Bug” AND (status == “Closed” OR status == “Resolved”) AND Resolution == “Fixed” in the project
 		do {
 			//Only gets a max of 1000 at a time, so must do this multiple times if bugs >1000
 			j = i + 1000;
 
 			//%20 = spazio                      %22=virgolette
-			//Si ricavano tutti i ticket di tipo bug nello stato di risolto o chiuso, con risoluzione "fixed" e con affected version.
-			String url = URLJIRA+ projectName + PIECE_OF_URL_JIRA+ "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22AND%22affectedVersion%22is%20not%20EMPTY"
+			//Si ricavano tutti i ticket di tipo bug nello stato di risolto o chiuso, con risoluzione "fixed" e con affected version non nulla.
+			String url = URLJIRA+ projectName + PIECE_OF_URL_JIRA+ "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22"
 					+ "%20AND%20updated%20%20%3E%20endOfYear(-"+YEARS_INTERVAL+")"
-					+ "&fields=key,created,versions&startAt="
+					+ "&fields=key,created&startAt="
 					+ i.toString() + MAX_RESULT + j.toString();
 
-            System.out.println(url);
+			// Il field created indica la data di creazione del ticket 
+
 			json = readJsonFromUrl(url);
 			issues = json.getJSONArray(ISSUES);
 			//ci si prende il numero totale di ticket recuperati
@@ -2119,12 +1857,7 @@ public class Main {
 
 			DateTimeFormatter format = DateTimeFormatter.ofPattern(FORMAT_DATE);
 
-
 			LocalDate date;
-			LocalDate affReleaseDate;
-			String affVersReleaseDate="";
-
-
 
 			// si itera sul numero di ticket
 			for (; i < total && i < j; i++) {
@@ -2132,38 +1865,24 @@ public class Main {
 				String key = issues.getJSONObject(i%1000).get("key").toString();
 				String createdDate= issues.getJSONObject(i%1000).getJSONObject(FIELDS).get("created").toString().substring(0,10);
 
-				//le righe seguenti sono necessarie perchè Jira potrebbe non fornire le releaseDate delle versioni affette
-
-				for(int h=0;h<issues.getJSONObject(i%1000).getJSONObject(FIELDS).getJSONArray(VERSIONS).length();h++) {
-					if(issues.getJSONObject(i%1000).getJSONObject(FIELDS).getJSONArray(VERSIONS).getJSONObject(h).has(RELEASE_DATE)) {
-						//affVers è per es. 4.1.0
-						affVersReleaseDate= issues.getJSONObject(i%1000).getJSONObject(FIELDS).getJSONArray(VERSIONS).getJSONObject(h).get(RELEASE_DATE).toString();
-						break;
-					}
-				}
-				//se la data dell'affected release non è stata presa allora si utilizerrà quella del bug più vicino temporalmente e se 
-				// non è consistente con la created version allora si ignorerà il bug con le righe successive di check
-
-
 				date = LocalDate.parse(createdDate,format);
-				affReleaseDate =LocalDate.parse(affVersReleaseDate,format);
 
-				checkAndGetCreatedVersion(date,affReleaseDate,key);
-
+				//si popola la list 'tickets'di TicketTakenFromJIRA 
+				getCreatedVersionAndAddToList(date,key);
 			}  
 		} while (i < total);
 
 	}
 
-	private static void checkAndGetCreatedVersion(LocalDate date,LocalDate affReleaseDate,String key) {
+	private static void getCreatedVersionAndAddToList(LocalDate createdDate,String key) {
 		String createdVers=null;
-		String affVers=null;
 		TicketTakenFromJIRA tick;
 
 		//se è la prima versione
-		if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
+		if (createdDate.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
 			createdVers= String.valueOf(1);
-			affVers=String.valueOf(1);
+			tick= new TicketTakenFromJIRA(key, createdVers);
+			tickets.add(tick);
 		}
 		else {
 			for(int a=1;a<=fromReleaseIndexToDate.size();a++) {
@@ -2171,45 +1890,22 @@ public class Main {
 				//abbiamo raggiunto nel for l'ultima release
 				if(a==fromReleaseIndexToDate.size()) {
 					createdVers= String.valueOf(a);
-					affVers=getAffVers(affReleaseDate);
-
-					//check su opening version e affected version
-					if (Integer.parseInt(createdVers)>=Integer.parseInt(affVers)) {
-						tick= new TicketTakenFromJIRA(key, createdVers, affVers);
-						tickets.add(tick);
-					}
+					tick= new TicketTakenFromJIRA(key, createdVers);
+					tickets.add(tick);
 					return;
 
-				}
-				else if ((date.atStartOfDay().isAfter(fromReleaseIndexToDate.get(String.valueOf(a)))
-						&&(date.atStartOfDay().isBefore(fromReleaseIndexToDate.get(String.valueOf(a+1)))||
-								(date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(a+1))))))) {
+				}// fine if ultima release
+
+				else if ((createdDate.atStartOfDay().isAfter(fromReleaseIndexToDate.get(String.valueOf(a)))
+						&&(createdDate.atStartOfDay().isBefore(fromReleaseIndexToDate.get(String.valueOf(a+1)))||
+								(createdDate.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(a+1))))))) {
 					createdVers= String.valueOf(a+1);
-
-					affVers= getAffVers(affReleaseDate);
-					break;//per uscire dal for
+					tick= new TicketTakenFromJIRA(key, createdVers);
+					tickets.add(tick);
+					break;//per uscire dal for una volta trovata la created version
 				}
 			}
 		}
-
-		//check su opening version e affected version
-		if (Integer.parseInt(createdVers)>=Integer.parseInt(affVers)) {
-			tick= new TicketTakenFromJIRA(key, createdVers, affVers);
-			tickets.add(tick);
-		}
-	}
-
-
-
-
-	private static String getAffVers(LocalDate affReleaseDate) {
-		for(int k=0;k<releases.size();k++) {
-			if(releases.get(k).isEqual(affReleaseDate.atStartOfDay())) {
-				return String.valueOf(k+1);
-
-			}
-		}
-		return String.valueOf(releases.size());
 	}
 
 
@@ -2273,6 +1969,53 @@ public class Main {
 		}
 
 	}
+
+	private static void startToGetNFixAtClassLevelMetric() throws IOException {
+
+
+		getNFixAtClassLevelMetric=true;
+		for (TicketTakenFromJIRA myTicket : tickets) {
+			ticket= myTicket;
+			//ora si prendono i commit su GIT associati a quei bug per ottenere la fixed version
+			try {
+
+				getLastCommitOfBug(myTicket.getKey());
+
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+
+		}
+
+		getNFixAtClassLevelMetric=false;
+
+	}
+	//per la metrica di classe NFix
+	private static void getLastCommitOfBug(String id) throws IOException, InterruptedException{
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+		String command;
+
+		try {    //ritorna id bug, data dell'ultimo commit con quel bug nel commento e una lista di tutti i file java modificati
+			command= ECHO+"\""+id+"\" && git log --grep="+id+": -1 --date=short --pretty=format:%ad &&"
+					+ " git log --graph --pretty=format:%d --name-only --grep="+id+": -- *.java";
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+
+
+
+
 
 	private static void findNumberOfReleases() throws JSONException, IOException {
 
@@ -2353,8 +2096,6 @@ public class Main {
 
 	public static void main(String[] args) throws IOException, JSONException {
 
-
-
 		findNumberOfReleases();
 
 
@@ -2369,6 +2110,13 @@ public class Main {
 		}	
 
 		//----------------------------------------------------------------------------
+
+		if(studyClassMetrics||studyCommitMetrics) {
+			//per la metrica di classe NFix e/o per la metrica di commit Fix 
+			//si popola l'array di TicketTakenFormJira per ogni bug
+			startToGetBugFixCommitFromJira();
+		}
+
 
 		//CLASS CLASSIFICATION
 		if(studyClassMetrics) {
@@ -2406,15 +2154,9 @@ public class Main {
 				Thread.currentThread().interrupt();
 				System.exit(-1);
 			}
-			startToCalculateBugginessWithKnownAV();
 
-			startToGetFixedVersWithAV();
-			setBuggy();
-
-			//startToGetCreatedVersWithoutAV();
-			//checkFixedVersWithoutAV();
-			//setBuggyWithoutAV();		 
-
+			// per calcolare metrica di classe Nfix
+			startToGetNFixAtClassLevelMetric();
 
 			writeClassMetricsResult();
 		}
@@ -2480,6 +2222,9 @@ public class Main {
 
 				commitOfCurrentRelease.clear();
 			}
+
+			getBugFixCommitsFromGitAndSetFixMetric();
+
 			//writeCommitMetricsResult();
 		}
 
@@ -2657,10 +2402,6 @@ public class Main {
 			calculatingAuthorOfCommit=true;
 			getAuthorOfCommit(commit);
 			calculatingAuthorOfCommit=false;
- 			
-			/*calculatingTypeOfCommit=true;
-             getTypeOfCommit(commit); da fare dopo
-			calculatingTypeOfCommit=false;*/
 
 			calculatingSexp=true;
 			getSexpCommitLevel(commit);
@@ -2670,14 +2411,14 @@ public class Main {
 			getExpCommitLevel(commit);
 			calculatingExp=false;
 
-			
+
 			//ora per le metriche AGE e REXP  -----------------
 			//per ogni file occorre calcolare la data dell'ultimo commit avvenuto
 			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
 				calculatingFileAgeCommitLevel=true;
 				getAgeCommitLevelOfFile(commit,modifiedFilesOfCommit.get(i));
 				calculatingFileAgeCommitLevel=false;
-				
+
 				calculatingLOCBeforeCommit=true;
 				getLinesOfCodeOfFileBeforeCommit(commit,modifiedFilesOfCommit.get(i));
 				calculatingLOCBeforeCommit=false;
@@ -2685,13 +2426,13 @@ public class Main {
 
 			//questo metodo utilizzerà dati condivisi per settare l'age di lineOfCommit 
 			calculateAgeCommitLevel();
-			
+
 			calculatingRecExp=true;
 			getRecExpCommitLevel(commit);
 			calculatingRecExp=false;
 
 			arrayOfEntryOfCommitDataset.add(lineOfCommit);
-			
+
 			//--------------------------------
 			listOfDaysPassedBetweenCommits.clear();
 			modifiedFilesOfCommit.clear();
@@ -2830,7 +2571,7 @@ public class Main {
 			//ritorna release e commit id, poi righe aggiunte, eliminate e nome del file java modificato
 			command = ECHO+version+" "+commit+" && git show  --format= --numstat "
 					+commit+" --no-renames -- *.java";	
-          
+
 			runCommandOnShell(directory, command);
 
 		} catch (IOException e) {
@@ -2867,28 +2608,6 @@ public class Main {
 			e.printStackTrace();
 			Thread.currentThread().interrupt();
 		}
-	}
-
-	private static void getTypeOfCommit(String commit) {
-/*
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {    
-			//ritorna l'autore del commit 
-			command = "git shortlog -s "+commit+"^! --grep=\""+\\\" ";	
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}*/
 	}
 
 	private static void getAuthorOfCommit(String commit) {
@@ -2984,60 +2703,99 @@ public class Main {
 			Thread.currentThread().interrupt();
 		}
 	}
-	
+
 	//qui si fa la media dei giorni passati dall'ultimo commit tra tutti i file e si setta il valore della metrica
 	private static void calculateAgeCommitLevel(){
 		int age=0;
-		 for (int i = 0; i < listOfDaysPassedBetweenCommits.size(); i++) {
-			 age+=listOfDaysPassedBetweenCommits.get(i);	
+		for (int i = 0; i < listOfDaysPassedBetweenCommits.size(); i++) {
+			age+=listOfDaysPassedBetweenCommits.get(i);	
 		}
-		 age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
-		 lineOfCommit.setAge(age);
+		age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
+		lineOfCommit.setAge(age);
 	}
-	
+
 	//per ottenere le date dei commit dell'author nel progetto fino al commit passato 
-		private static void getRecExpCommitLevel(String commit) {
+	private static void getRecExpCommitLevel(String commit) {
 
-			//directory da cui far partire il comando git    
-			Path directory = Paths.get(new File("").getAbsolutePath()+
-					SLASH+projectName);
-			String command;
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName);
+		String command;
 
+		try {
+			command = "git log --date=short "+commit+" --author=\""+authorOfCommit+"\" --format=%ad";
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	//per ottenere le linee di codice fino a quel commit (incluso) del file passato
+	private static void getLinesOfCodeOfFileBeforeCommit(String commit, String filename) {
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+		String command;
+
+		// git log [commit] --format= --numstat -- [filename]
+
+		try {
+
+			command ="git log "+commit+FORMATNUMSTAT+filename;	
+
+			runCommandOnShell(directory, command);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+
+	}
+
+	//qui si cercano tutti i fix commit di ogni bug ticket di Jira
+	private static void getBugFixCommitsFromGitAndSetFixMetric() throws IOException {
+		calculatingTypeOfCommit=true;
+		for (TicketTakenFromJIRA myTicket : tickets) {
 			try {
-				command = "git log --date=short "+commit+" --author=\""+authorOfCommit+"\" --format=%ad";
+				ticket=myTicket;
+				getAllCommitOfBugFix(myTicket.getKey());
 
-				runCommandOnShell(directory, command);
-
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				Thread.currentThread().interrupt();
 			}
+
 		}
-		
-		//per ottenere le linee di codice fino a quel commit (incluso) del file passato
-		private static void getLinesOfCodeOfFileBeforeCommit(String commit, String filename) {
-			//directory da cui far partire il comando git    
-			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-			String command;
+		calculatingTypeOfCommit=false;
 
-			// git log [commit] --format= --numstat -- [filename]
+		//ora si settano i fix commit trovati nel dataset
+		//per ogni ticket
+		for (TicketTakenFromJIRA myTicket : tickets) {
+			//per ogni fix commit del ticket
+			for (int i = 0; i < myTicket.getFixCommitList().size(); i++) {
+				//si cerca la linea del dataset di commit corrispondente
+				for (LineOfCommitDataset commitLine : arrayOfEntryOfCommitDataset) {
+					if(commitLine.getCommit().equals(myTicket.getFixCommitList().get(i))) {
+						commitLine.setDefectFix("YES");
+						break;
+					}
 
-			try {
-
-				command ="git log "+commit+FORMATNUMSTAT+filename;	
-
-				runCommandOnShell(directory, command);
-
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				Thread.currentThread().interrupt();
+				}
 			}
-
 		}
+
+
+	}
+
+
+
+
 }

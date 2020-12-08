@@ -5,17 +5,15 @@ import java.util.List;
 public class TicketTakenFromJIRA {
      private String key;
      private String createdVersionIndex;
-     private String affectedVersionIndex;
      private String fixedVersion;
-     private List<String> filenames;
+     private List<String> fixCommitList;
      
      
      
-	public TicketTakenFromJIRA(String key, String createdVersion, String affectedVersion) {
+	public TicketTakenFromJIRA(String key, String createdVersion) {
 		super();
 		this.key = key;
 		this.createdVersionIndex = createdVersion;
-		affectedVersionIndex = affectedVersion;
 	}
 
 
@@ -56,25 +54,6 @@ public class TicketTakenFromJIRA {
 	}
 
 
-
-	/**
-	 * @return the affectedVersion
-	 */
-	public String getAffectedVersion() {
-		return affectedVersionIndex;
-	}
-
-
-
-	/**
-	 * @param affectedVersion the affectedVersion to set
-	 */
-	public void setAffectedVersion(String affectedVersion) {
-		affectedVersionIndex = affectedVersion;
-	}
-
-
-
 	/**
 	 * @return the fixedVersion
 	 */
@@ -92,23 +71,21 @@ public class TicketTakenFromJIRA {
 	}
 
 
-
-
 	/**
-	 * @return the filenames
+	 * @return the fixCommitList
 	 */
-	public List<String> getFilenames() {
-		return filenames;
+	public List<String> getFixCommitList() {
+		return fixCommitList;
 	}
 
 
 
 
 	/**
-	 * @param filenames the filenames to set
+	 * @param fixCommitList the fixCommitList to set
 	 */
-	public void setFilenames(List<String> filenames) {
-		this.filenames = filenames;
+	public void setFixCommitList(List<String> fixCommitList) {
+		this.fixCommitList = fixCommitList;
 	}
 
 }
