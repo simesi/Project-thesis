@@ -58,7 +58,9 @@ public class Main {
 	private static String projectName="BOOKKEEPER";//"OPENJPA";
 	private static String projectNameGit="apache/bookkeeper.git";//"apache/openjpa.git";
 
-
+	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
+	private static boolean studyClassMetrics=false; //calcola le metriche di classe
+	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
 	public static Map<LocalDateTime, String> releaseNames;
 	public static Map<LocalDateTime, String> releaseID;
@@ -107,9 +109,6 @@ public class Main {
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
 	private static final String FINER_GIT="_FinerGit_";
 
-	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
-	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=true;; //calcola le metriche di commit
 
 	private static boolean calculatingStmtMetricsMethodLevel=false;
 	private static boolean calculatingElseMetricsMethodLevel=false;
@@ -341,8 +340,7 @@ public class Main {
 						getFixMetricAtCommitLevel(line,br);
 					}
 					else {
-
-						System.out.println(line);
+						//System.out.println(line);
 					}
 				}
 
@@ -383,7 +381,11 @@ public class Main {
 				commitsList.add(nextLine);
 				nextLine =br.readLine();
 			}
-			ticket.setFixCommitList(commitsList);
+			for (int i = 0; i < commitsList.size(); i++) {
+				ticket.getFixCommitList().add(commitsList.get(i));	
+			}
+			commitsList.clear();
+
 
 		}
 
@@ -544,8 +546,6 @@ public class Main {
 			String nextLine;
 			String myAuthor = "";
 
-			line=line.trim();
-
 			myAuthor=line;
 
 			nextLine =br.readLine();
@@ -553,7 +553,7 @@ public class Main {
 			while(nextLine != null) {
 			}
 
-			authorOfCommit=myAuthor; 
+			authorOfCommit=myAuthor;
 		}
 
 
@@ -594,14 +594,12 @@ public class Main {
 			int numFile=0;
 			int realAddedLines=0;
 			int realDeletedLOC=0;
-			int sumOfDelLines=0;
 			String fullFilePath;
 			String subSystem;
 			String directory;
 			int sumModifiedLines=0;
 			int i;
 			double entropy = 0.0;
-			int diff=0;
 			List<Integer> arrModifiedLines= new ArrayList<>();
 			List<String> arrDirList = new ArrayList<>();
 
@@ -615,24 +613,19 @@ public class Main {
 
 			nextLine =br.readLine();
 
-			//da qui si otterrà una lista di hash commits
-
 			while (nextLine != null) {
 				numFile++;
 				nextLine=nextLine.trim();
 				tokens=nextLine.split("\\s+");
 
 				//discard of modified lines
-				realAddedLines +=Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]);
-				realDeletedLOC+=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+				realAddedLines +=Math.max((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1])),0);
+				realDeletedLOC+=Math.max((Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0])),0);
 
 				//for entropy
-				sumOfDelLines=Integer.parseInt(tokens[1]);
-				if((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1]))<0){
-					diff=Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0]);
+				if (Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]))>0) {
+				arrModifiedLines.add(Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1])));
 				}
-				arrModifiedLines.add(sumOfDelLines-diff);
-				diff=0;
 
 				fullFilePath=tokens[2];
 
@@ -669,10 +662,11 @@ public class Main {
 			} 
 
 			for (int j = 0; j < arrModifiedLines.size(); j++) {
-				entropy+=(double)((((double)arrModifiedLines.get(j)*(-1))/(double)sumModifiedLines))*
-						(Math.log((double)arrModifiedLines.get(j)/(double)sumModifiedLines)
-								/(double) Math.log(2)); 	
-			} 
+				entropy+=(double)((((double)arrModifiedLines.get(j)*(-1))/(double)sumModifiedLines)*
+						(Math.log(((double)arrModifiedLines.get(j))/((double)sumModifiedLines))
+								/((double) Math.log(2)))); 
+						} 
+		
 
 			lineOfCommit.setEntropy(entropy);
 
@@ -1277,8 +1271,7 @@ public class Main {
 			lineOfClassDataset.setWeightedAge(0);
 
 			if(lineOfClassDataset.getLOCTouched()>0) {
-				lineOfClassDataset.setWeightedAge(Math.floorDiv(age,
-						lineOfClassDataset.getLOCTouched()));
+				lineOfClassDataset.setWeightedAge((double)age/(double)lineOfClassDataset.getLOCTouched());
 			}
 			lineOfClassDataset.setAge(age);
 
@@ -1463,9 +1456,6 @@ public class Main {
 		}
 	}
 
-
-	//------------------------------------------
-	//Metodi per Deliverable 2 Milestone 1
 
 	public static void addRelease(String strDate, String name, String id) {
 		LocalDate date = LocalDate.parse(strDate);
@@ -1770,9 +1760,9 @@ public class Main {
 
 
 
-			fileWriter.append("Project,Release,Class,Size(LOC), LOC_Touched,"
-					+ "NR,NFix,NAuth,LOC_Added,MAX_LOC_Added,AVG_LOC_Added,"
-					+ "Churn,MAX_Churn,AVG_Churn,ChgSetSize,MAX_ChgSet,AVG_ChgSet,Age,Weighted_Age,Actual_Defective");
+			fileWriter.append("Project;Release;Class;Size(LOC);LOC_Touched;"
+					+ "NR;NFix;NAuth;LOC_Added;MAX_LOC_Added;AVG_LOC_Added;"
+					+ "Churn;MAX_Churn;AVG_Churn;ChgSetSize;MAX_ChgSet;AVG_ChgSet;Age;Weighted_Age;Actual_Defective");
 			fileWriter.append("\n");
 			for ( LineOfClassDataset line : arrayOfEntryOfClassDataset) {
 
@@ -2097,8 +2087,7 @@ public class Main {
 	public static void main(String[] args) throws IOException, JSONException {
 
 		findNumberOfReleases();
-
-
+		
 		try {
 			//si fa il clone della versione odierna del progetto
 			gitClone();	
@@ -2225,7 +2214,7 @@ public class Main {
 
 			getBugFixCommitsFromGitAndSetFixMetric();
 
-			//writeCommitMetricsResult();
+			writeCommitMetricsResult();
 		}
 
 		//cancellazione directory clonata locale del progetto   
@@ -2385,10 +2374,8 @@ public class Main {
 
 	private static void calculateCommitMetrics(int version) {
 
-		int count=0;
 		//per ogni commit nella release (version)
 		for (String commit : commitOfCurrentRelease) {
-			count++;
 
 			calculatingFirstHalfCommitMetrics = true;
 			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
@@ -2480,9 +2467,9 @@ public class Main {
 
 
 
-			fileWriter.append("Project,Release,Method,methodHistories,authors,"
-					+ "stmtAdded,maxStmtAdded,avgStmtAdded,stmtDeleted,maxStmtDeleted,"
-					+ "avgStmtDeleted,Churn,MaxChurn,AvgChurn,cond,elseAdded,elseDeleted,Actual_Defective");
+			fileWriter.append("Project;Release;Method;methodHistories;authors;"
+					+ "stmtAdded;maxStmtAdded;avgStmtAdded;stmtDeleted;maxStmtDeleted;"
+					+ "avgStmtDeleted;Churn;MaxChurn;AvgChurn;cond;elseAdded;elseDeleted;Actual_Defective");
 			fileWriter.append("\n");
 			for ( LineOfMethodDataset line : arrayOfEntryOfMethodDataset) {
 
@@ -2619,8 +2606,7 @@ public class Main {
 
 		try {    
 			//ritorna l'autore del commit 
-			command = "git show -s --format=\"%an\"" +commit;	
-
+			command = "git show -s --format=\"%an\" "+commit;	
 			runCommandOnShell(directory, command);
 
 		} catch (IOException e) {
@@ -2633,7 +2619,7 @@ public class Main {
 	}
 
 
-	//per ottenere il numero di commit dell'author rigurdanti i "subsystem" fino al commit passato 
+	//per ottenere il numero di commit dell'author riguardanti i "subsystem" fino al commit passato 
 	private static void getSexpCommitLevel(String commit) {
 
 		//directory da cui far partire il comando git    
@@ -2643,7 +2629,7 @@ public class Main {
 
 		try {
 			command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\" -- ";
-			//aggiungo i nome dei file toccati dal commit in esame
+			//aggiungo i nomi dei file toccati dal commit in esame
 			for (int i = 0; i < modifiedSubOfCommit.size(); i++) {
 				command.concat(modifiedSubOfCommit.get(i));				
 			}
@@ -2795,7 +2781,64 @@ public class Main {
 
 	}
 
+	private static void writeCommitMetricsResult() {
+		String outname = projectName + "_Commit.csv";
+		//Name of CSV for output
 
+		try (FileWriter fileWriter = new FileWriter(outname)){
+
+
+
+			fileWriter.append("Project;Release;Commit;NS;ND;"
+					+ "NF;Entropy;LA;LD;LT;"
+					+ "FIX;NDEV;AGE;NUC;EXP;REXP;SEXP;Actual_Defective");
+			fileWriter.append("\n");
+			for ( LineOfCommitDataset line : arrayOfEntryOfCommitDataset) {
+
+				fileWriter.append(projectName);
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getVersion()));
+				fileWriter.append(";");
+				fileWriter.append(line.getCommit());
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getNumModSub()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getNumModDir()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getNumModFiles()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getEntropy()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getLineAdded()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getLineDeleted()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getLineBeforeChange()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getDefectFix()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getNumDev()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getAge()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getNuc()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getExp()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getRecentExp()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getSubExp()));
+				fileWriter.append(";");
+				fileWriter.append(line.getBugIntroducing());
+				fileWriter.append("\n");
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+
+	}
 
 
 }

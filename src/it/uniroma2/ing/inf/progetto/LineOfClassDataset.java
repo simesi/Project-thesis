@@ -18,7 +18,7 @@ public class LineOfClassDataset {
 	private String buggy= "NO";
 	private int nFix=0;	
 	private int age;
-	private int WeightedAge;
+	private double WeightedAge;
 	private int chgSetSize;
 	private int maxChgSet;
 	private int avgChgSet;
@@ -47,7 +47,7 @@ public class LineOfClassDataset {
 	/**
 	 * @return the weightedAge
 	 */
-	public int getWeightedAge() {
+	public double getWeightedAge() {
 		return WeightedAge;
 	}
 
@@ -56,7 +56,7 @@ public class LineOfClassDataset {
 	/**
 	 * @param weightedAge the weightedAge to set
 	 */
-	public void setWeightedAge(int weightedAge) {
+	public void setWeightedAge(double weightedAge) {
 		WeightedAge = weightedAge;
 	}
 

@@ -1,5 +1,6 @@
 package it.uniroma2.ing.inf.progetto;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class TicketTakenFromJIRA {
@@ -14,6 +15,7 @@ public class TicketTakenFromJIRA {
 		super();
 		this.key = key;
 		this.createdVersionIndex = createdVersion;
+		this.fixCommitList= new ArrayList<>();
 	}
 
 
@@ -79,13 +81,5 @@ public class TicketTakenFromJIRA {
 	}
 
 
-
-
-	/**
-	 * @param fixCommitList the fixCommitList to set
-	 */
-	public void setFixCommitList(List<String> fixCommitList) {
-		this.fixCommitList = fixCommitList;
-	}
 
 }
