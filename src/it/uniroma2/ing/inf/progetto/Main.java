@@ -1576,7 +1576,7 @@ public class Main {
 		String command;
 
 		try {    //ritorna id bug, id commit con quel bug nel commento
-			command= ECHO+"\""+id+"\" && git log --grep="+id+": --pretty=format:%H -- *.java ";
+			command= ECHO+"\""+id+"\" && git log --grep=\""+id+" \"||"+id+": --pretty=format:%H -- *.java ";
 
 			runCommandOnShell(directory, command);
 
@@ -1987,7 +1987,7 @@ public class Main {
 		String command;
 
 		try {    //ritorna id bug, data dell'ultimo commit con quel bug nel commento e una lista di tutti i file java modificati
-			command= ECHO+"\""+id+"\" && git log --grep="+id+": -1 --date=short --pretty=format:%ad &&"
+			command= ECHO+"\""+id+"\" && git log --grep=\""+id+" \"||"+id+": -1 --date=short --pretty=format:%ad &&"
 					+ " git log --graph --pretty=format:%d --name-only --grep="+id+": -- *.java";
 
 			runCommandOnShell(directory, command);
