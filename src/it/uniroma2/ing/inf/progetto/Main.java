@@ -105,7 +105,6 @@ public class Main {
 	private static final String TOTAL= "total"; 
 	private static final String FORMAT_DATE= "yyyy-MM-dd";
 	private static final String RELEASE_DATE="releaseDate";
-	private static final int YEARS_INTERVAL=14;
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
 	private static final String FINER_GIT="_FinerGit_";
 
@@ -361,7 +360,7 @@ public class Main {
 			String bug= tokens[0];
 			List<String> commitsList= new ArrayList<>();
 
-			//ora prendo la data di ogni fix commit
+			
 			nextLine =br.readLine();
 
 			//non c'è un commit con questo id quindi non scrivo nulla
@@ -1834,8 +1833,7 @@ public class Main {
 			//%20 = spazio                      %22=virgolette
 			//Si ricavano tutti i ticket di tipo bug nello stato di risolto o chiuso, con risoluzione "fixed" e con affected version non nulla.
 			String url = URLJIRA+ projectName + PIECE_OF_URL_JIRA+ "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22"
-					+ "%20AND%20updated%20%20%3E%20endOfYear(-"+YEARS_INTERVAL+")"
-					+ "&fields=key,created&startAt="
+					+ "%20&fields=key,created&startAt="
 					+ i.toString() + MAX_RESULT + j.toString();
 
 			// Il field created indica la data di creazione del ticket 
