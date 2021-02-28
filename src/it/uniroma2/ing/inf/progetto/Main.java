@@ -12,6 +12,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.sun.org.apache.bcel.internal.generic.I2F;
+
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -360,7 +362,7 @@ public class Main {
 			String bug= tokens[0];
 			List<String> commitsList= new ArrayList<>();
 
-			
+
 			nextLine =br.readLine();
 
 			//non c'è un commit con questo id quindi non scrivo nulla
@@ -623,7 +625,7 @@ public class Main {
 
 				//for entropy
 				if (Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]))>0) {
-				arrModifiedLines.add(Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1])));
+					arrModifiedLines.add(Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1])));
 				}
 
 				fullFilePath=tokens[2];
@@ -664,8 +666,8 @@ public class Main {
 				entropy+=(double)((((double)arrModifiedLines.get(j)*(-1))/(double)sumModifiedLines)*
 						(Math.log(((double)arrModifiedLines.get(j))/((double)sumModifiedLines))
 								/((double) Math.log(2)))); 
-						} 
-		
+			} 
+
 
 			lineOfCommit.setEntropy(entropy);
 
@@ -2085,7 +2087,7 @@ public class Main {
 	public static void main(String[] args) throws IOException, JSONException {
 
 		findNumberOfReleases();
-		
+
 		try {
 			//si fa il clone della versione odierna del progetto
 			gitClone();	
@@ -2349,24 +2351,33 @@ public class Main {
 		//per ogni metodo nella release (version)
 		for (String method : fileMethodsOfTheCurrentRelease) {
 			count++;
-			System.out.println("Inizio a calcolare metriche per metodo: "+count+"°");
+			System.out.println("Inizio a calcolare metriche per metodo: "+count+"°, versione "+version);
 
 			calculatingStmtMetricsMethodLevel = true;
 			//il metodo getFirstHalfMethodMetrics() creerà anche l'arrayList di entry LineOfMethodDataset
 			getFirstHalfMethodMetrics(method,version);
 			calculatingStmtMetricsMethodLevel = false;
 
-			calculatingElseMetricsMethodLevel=true;
-			getElseMetrics(method,version);
-			calculatingElseMetricsMethodLevel=false;
+			if (lineOfMethod.getMethodHistories()!=0) {
+				calculatingElseMetricsMethodLevel=true;
+				getElseMetrics(method,version);
+				calculatingElseMetricsMethodLevel=false;
 
-			calculatingCondMetricMethodLevel=true;
-			getCondMetric(method,version);
-			calculatingCondMetricMethodLevel=false;
+				calculatingCondMetricMethodLevel=true;
+				getCondMetric(method,version);
+				calculatingCondMetricMethodLevel=false;
 
-			calculatingAuthMetricMethodLevel=true;
-			getNumberOfAuthorsOfMetod( method,version);
-			calculatingAuthMetricMethodLevel=false;
+				calculatingAuthMetricMethodLevel=true;
+				getNumberOfAuthorsOfMetod( method,version);
+				calculatingAuthMetricMethodLevel=false;
+			}
+			else { //no commit founded during this release on this method
+				lineOfMethod.setCond(0);
+				lineOfMethod.setElseAdded(0);
+				lineOfMethod.setElseDeleted(0);
+				lineOfMethod.setAuthors(0);
+				arrayOfEntryOfMethodDataset.add(lineOfMethod);
+			}
 		}
 	}
 
