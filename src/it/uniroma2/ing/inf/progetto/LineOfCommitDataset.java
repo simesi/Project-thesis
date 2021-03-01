@@ -117,12 +117,7 @@ public class LineOfCommitDataset {
 	public void setLineBeforeChange(int lineBeforeChange) {
 		this.lineBeforeChange = lineBeforeChange;
 	}
-	/**
-	 * @return the defectFix
-	 */
-	public String isDefectFix() {
-		return defectFix;
-	}
+	
 	/**
 	 * @param defectFix the defectFix to set
 	 */

@@ -12,8 +12,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.sun.org.apache.bcel.internal.generic.I2F;
-
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -57,8 +55,8 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName="BOOKKEEPER";//"OPENJPA";
-	private static String projectNameGit="apache/bookkeeper.git";//"apache/openjpa.git";
+	private static String projectName="OPENJPA";
+	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
 
 	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
@@ -641,11 +639,14 @@ public class Main {
 					modifiedSubOfCommit.add(subSystem);
 				}
 
-				//ora levo il nome del file per avere la directory
-				i = parts[1].lastIndexOf("/");
-				directory =  parts[1].substring(0, i);
-				if (!arrDirList.contains(directory)){
-					arrDirList.add(directory);
+				 
+				if(parts[0].length()!=fullFilePath.length()){
+					//ora levo il nome del file per avere la directory
+					i = parts[1].lastIndexOf("/");
+					directory =  parts[1].substring(0, i);
+					if (!arrDirList.contains(directory)){
+						arrDirList.add(directory);
+					}
 				}
 				nextLine =br.readLine();
 			}
@@ -2194,6 +2195,8 @@ public class Main {
 			modifiedSubOfCommit= new ArrayList<>();
 			listOfDaysPassedBetweenCommits=new ArrayList<>();
 
+
+
 			//per ogni versione nella primà metà delle release
 			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
 
@@ -2379,8 +2382,15 @@ public class Main {
 
 	private static void calculateCommitMetrics(int version) {
 
+		int counter =0;
 		//per ogni commit nella release (version)
 		for (String commit : commitOfCurrentRelease) {
+
+			counter++;
+			if(Math.floorMod(counter, 10)==0) {
+				System.out.println("Commit "+counter+" release "+version);
+			}
+
 
 			calculatingFirstHalfCommitMetrics = true;
 			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
