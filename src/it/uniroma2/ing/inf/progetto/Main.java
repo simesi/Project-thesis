@@ -2372,10 +2372,6 @@ public class Main {
 				calculatingAuthMetricMethodLevel=false;
 			}
 			else { //no commit founded during this release on this method
-				lineOfMethod.setCond(0);
-				lineOfMethod.setElseAdded(0);
-				lineOfMethod.setElseDeleted(0);
-				lineOfMethod.setAuthors(0);
 				arrayOfEntryOfMethodDataset.add(lineOfMethod);
 			}
 		}
