@@ -58,9 +58,12 @@ public class Main {
 	private static String projectName="OPENJPA";
 	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
 
-	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
+	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
+
+	//cancella questa variabile
+	static int counterMethods=0;////
 
 	public static Map<LocalDateTime, String> releaseNames;
 	public static Map<LocalDateTime, String> releaseID;
@@ -109,10 +112,6 @@ public class Main {
 	private static final String FINER_GIT="_FinerGit_";
 
 
-	private static boolean calculatingStmtMetricsMethodLevel=false;
-	private static boolean calculatingElseMetricsMethodLevel=false;
-	private static boolean calculatingCondMetricMethodLevel=false;
-	private static boolean calculatingAuthMetricMethodLevel=false;
 
 	private static boolean calculatingCommitInRelease=false;
 	private static boolean calculatingFirstHalfCommitMetrics=false;
@@ -125,7 +124,19 @@ public class Main {
 	private static boolean calculatingRecExp=false;
 	private static boolean calculatingLOCBeforeCommit=false;
 
-	private static LineOfMethodDataset lineOfMethod;
+	private static final int numOfThreads= 10; //set this variable to set the number of threads
+	
+	
+	///////////////////////////////    used to set boolean conditions for every thread
+	private static Boolean[][] calculatingMethodMetrics = new Boolean[numOfThreads][4];////////////////////////////////
+	/////////////////////////////////
+
+	//this array has much dimensions as threads used, every field is the method upon a thread is working 
+	private static LineOfMethodDataset[] threadsLineOfMethod= new LineOfMethodDataset[numOfThreads];
+
+
+	//{new LineOfMethodDataset(0, null), new LineOfMethodDataset(0, null), 
+
 	private static LineOfClassDataset lineOfClassDataset;
 	private static LineOfCommitDataset lineOfCommit;
 	private static TicketTakenFromJIRA ticket;
@@ -217,11 +228,43 @@ public class Main {
 		}
 	}
 
-	public static void runCommandOnShell(Path directory, String command) throws IOException, InterruptedException {
+	//routine specifica per il calcolo delle metriche di metodo per il thread tid
+	private static void runProcWithTidAndWait(ProcessBuilder pb, Integer tid) throws IOException, InterruptedException {
+		//lancio un nuovo processo che invocherà il comando 'command',
+		//nella working directory fornita. 
+		Process p = pb.start();
 
+		StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream(),tid);
+
+		StreamGobbler outputGobbler = new StreamGobbler(p.getInputStream(),tid);
+
+		outputGobbler.start();
+
+		errorGobbler.start();
+
+		int exit = p.waitFor();
+
+		errorGobbler.join();
+
+		outputGobbler.join();
+
+		if (exit != 0) {
+
+			throw new AssertionError(String.format("runCommand with tid %d returned %d",tid, exit));
+
+		}
+	}
+	public static void runCommandOnShell(Path directory, String command) throws IOException, InterruptedException {
 		ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c","E: && cd "+directory.toString()+" && "+command);	
 
 		runProcAndWait(pb);
+
+	}
+
+	public static void runCommandOnShellWithTid(Path directory, String command,Integer tid) throws IOException, InterruptedException {
+		ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c","E: && cd "+directory.toString()+" && "+command);	
+
+		runProcWithTidAndWait(pb,tid);
 
 	}
 
@@ -245,11 +288,35 @@ public class Main {
 
 	}
 
+	private static class SimpleMethodMetricsRunner implements Runnable { 
+		int tid = 0; 
+		private int start; 
+		private int stride;
+		private int rel;
 
+		public SimpleMethodMetricsRunner(int stride, int start, int rel) {
+			this.stride = stride;
+			this.start = start;
+			this.rel = rel;}
+
+		public void run() {
+
+			calculateMethodsMetrics(rel,stride,start);
+
+		}
+	}
 
 	private static class StreamGobbler extends Thread {
 
 		private final InputStream is;
+		private int tid=100; //don't care value
+
+		private StreamGobbler(InputStream is, int tid) {
+
+			this.is = is;
+			this.tid = tid;
+
+		}
 
 		private StreamGobbler(InputStream is) {
 
@@ -296,18 +363,6 @@ public class Main {
 					else if (getNFixAtClassLevelMetric) {
 						gettingLastCommit(line,br);
 					}
-					else if (calculatingStmtMetricsMethodLevel) {
-						getFirstHalfMethodsMetrics(line,br);
-					}
-					else if (calculatingElseMetricsMethodLevel) {
-						getElseMetricsAtMethodLevel(line,br);
-					}
-					else if(calculatingCondMetricMethodLevel) {
-						getCondMetricAtMethodLevel(line,br);
-					}
-					else if(calculatingAuthMetricMethodLevel) {
-						getAuthMetricAtMethodLevel(line,br);
-					}
 					else if(calculatingCommitInRelease) {
 						getCommitIdForCommitLevel(line,br);
 					}
@@ -338,8 +393,25 @@ public class Main {
 					else if(calculatingTypeOfCommit) {
 						getFixMetricAtCommitLevel(line,br);
 					}
+
+					/////////////////////////////////////
+					else if(tid!=100) {
+						if (calculatingMethodMetrics[tid][0]) {
+							getFirstHalfMethodsMetrics(line,br,tid);
+						}
+						else if (calculatingMethodMetrics[tid][1]) {
+							getElseMetricsAtMethodLevel(line,br,tid);
+						}
+						else if(calculatingMethodMetrics[tid][2]) {
+							getCondMetricAtMethodLevel(line,br,tid);
+						}
+						else if(calculatingMethodMetrics[tid][3]) {
+							getAuthMetricAtMethodLevel(line,br,tid);
+						}
+					}
+					/////////////////////////////////////////////
 					else {
-						//System.out.println(line);
+						System.out.println(line);
 					}
 				}
 
@@ -639,7 +711,7 @@ public class Main {
 					modifiedSubOfCommit.add(subSystem);
 				}
 
-				 
+
 				if(parts[0].length()!=fullFilePath.length()){
 					//ora levo il nome del file per avere la directory
 					i = parts[1].lastIndexOf("/");
@@ -698,7 +770,7 @@ public class Main {
 			}
 		}
 
-		private void getAuthMetricAtMethodLevel(String line, BufferedReader br) throws IOException {
+		private void getAuthMetricAtMethodLevel(String line, BufferedReader br, int tid) throws IOException {
 			String nextLine;
 			String version;
 			String method = "";
@@ -720,15 +792,15 @@ public class Main {
 			}
 
 			if (nAuth!=0) {
-				lineOfMethod.setAuthors(nAuth);
-				arrayOfEntryOfMethodDataset.add(lineOfMethod);
+				threadsLineOfMethod[tid].setAuthors(nAuth);
+				arrayOfEntryOfMethodDataset.add(threadsLineOfMethod[tid]);
 			}
 
 		}
 
 
 
-		private void getCondMetricAtMethodLevel(String line, BufferedReader br) throws IOException {
+		private void getCondMetricAtMethodLevel(String line, BufferedReader br, int tid) throws IOException {
 			String nextLine;
 			String version;
 			String filename;
@@ -769,16 +841,16 @@ public class Main {
 				nextLine =br.readLine();
 			}
 
-			sumOfModifiedCondition+=lineOfMethod.getElseAdded();
-			sumOfModifiedCondition+=lineOfMethod.getElseDeleted();
+			sumOfModifiedCondition+=threadsLineOfMethod[tid].getElseAdded();
+			sumOfModifiedCondition+=threadsLineOfMethod[tid].getElseDeleted();
 			sumOfModifiedCondition+=countIfAdded;
 			sumOfModifiedCondition+=countIfDeleted;
-			lineOfMethod.setCond(sumOfModifiedCondition);
+			threadsLineOfMethod[tid].setCond(sumOfModifiedCondition);
 
 		}
 
 
-		private void getElseMetricsAtMethodLevel(String line, BufferedReader br) throws IOException {
+		private void getElseMetricsAtMethodLevel(String line, BufferedReader br, int tid) throws IOException {
 			String nextLine;
 			String version;
 			String filename;
@@ -820,13 +892,13 @@ public class Main {
 
 			//la scrittura avviene solo se il risultato è maggiore di 0 
 			if (countElseAdded>0||countElseDeleted>0) {
-				lineOfMethod.setElseAdded(countElseAdded);
-				lineOfMethod.setElseDeleted(countElseDeleted);
+				threadsLineOfMethod[tid].setElseAdded(countElseAdded);
+				threadsLineOfMethod[tid].setElseDeleted(countElseDeleted);
 			}
 
 		}
 
-		private void getFirstHalfMethodsMetrics(String line, BufferedReader br) throws IOException {
+		private void getFirstHalfMethodsMetrics(String line, BufferedReader br, int tid) throws IOException {
 			String version;
 			int numOfCommits=0;
 			String nextLine;
@@ -904,14 +976,14 @@ public class Main {
 				avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
 			}
 
-			lineOfMethod = new LineOfMethodDataset(Integer.parseInt(version), methodName);
+			threadsLineOfMethod[tid]= new LineOfMethodDataset(Integer.parseInt(version), methodName);
 
-			lineOfMethod.setMethodHistories(numOfCommits);
-			lineOfMethod.setMaxStmtAdded(maxAddedlines);
+			threadsLineOfMethod[tid].setMethodHistories(numOfCommits);
+			threadsLineOfMethod[tid].setMaxStmtAdded(maxAddedlines);
 
-			lineOfMethod.setChurn(Math.max(addedLines-deletedLines, 0));
-			lineOfMethod.setMaxChurn(maxChurn);
-			lineOfMethod.setAvgChurn(avgChurn);
+			threadsLineOfMethod[tid].setChurn(Math.max(addedLines-deletedLines, 0));
+			threadsLineOfMethod[tid].setMaxChurn(maxChurn);
+			threadsLineOfMethod[tid].setAvgChurn(avgChurn);
 
 			//calcolo AVG_LOC_Added (è fatto solo sulle linee inserite)-----------------------
 			for(int n=0; n<realAddedLinesOverCommits.size(); n++){
@@ -926,13 +998,13 @@ public class Main {
 
 
 			//--------------------------------------------------
-			lineOfMethod.setAvgStmtAdded(average);  
-			lineOfMethod.setStmtAdded(totalAdded);
-			lineOfMethod.setStmtDeleted(sumOfRealDeletedLOC);
-			lineOfMethod.setMaxStmtDeleted(maxDeletedLines);
+			threadsLineOfMethod[tid].setAvgStmtAdded(average);  
+			threadsLineOfMethod[tid].setStmtAdded(totalAdded);
+			threadsLineOfMethod[tid].setStmtDeleted(sumOfRealDeletedLOC);
+			threadsLineOfMethod[tid].setMaxStmtDeleted(maxDeletedLines);
 
 			if (numOfCommitsWithDel>0) {
-				lineOfMethod.setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
+				threadsLineOfMethod[tid].setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
 			}
 
 		}
@@ -1592,7 +1664,7 @@ public class Main {
 		}
 	}
 
-	private static void getNumberOfAuthorsOfMetod(String method, Integer version) {
+	private static void getNumberOfAuthorsOfMetod(String method, Integer version, int start) {
 
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -1604,7 +1676,7 @@ public class Main {
 			command = ECHO+version+" \""+method+"\" && git shortlog -sn --all --until="
 					+fromReleaseIndexToDate.get(String.valueOf(version))+" \""+method+"\"";	
 
-			runCommandOnShell(directory, command);
+			runCommandOnShellWithTid(directory, command,start);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1615,7 +1687,7 @@ public class Main {
 		}
 	}
 
-	private static void getCondMetric(String method, Integer version) {
+	private static void getCondMetric(String method, Integer version, int start) {
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
 				SLASH+projectName+FINER_GIT+version);
@@ -1641,7 +1713,7 @@ public class Main {
 
 			}
 
-			runCommandOnShell(directory, command);
+			runCommandOnShellWithTid(directory, command,start);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1654,7 +1726,7 @@ public class Main {
 
 
 
-	private static void getElseMetrics(String method, Integer version) {
+	private static void getElseMetrics(String method, Integer version, int start) {
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
 				SLASH+projectName+FINER_GIT+version);
@@ -1680,7 +1752,7 @@ public class Main {
 
 			}
 
-			runCommandOnShell(directory, command);
+			runCommandOnShellWithTid(directory, command,start);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -1691,8 +1763,8 @@ public class Main {
 		}
 	}
 
-
-	private static void getFirstHalfMethodMetrics(String filename, Integer version) {
+	//start==tid
+	private static void getFirstHalfMethodMetrics(String filename, Integer version, Integer start) {
 
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -1703,7 +1775,7 @@ public class Main {
 
 			if(version>1) {
 
-				//ritorna release e metodo (con il nome di allora), poi righe aggiunte, elimiante e nome del metodo (ad oggi)
+				//ritorna release e metodo (con il nome di allora), poi righe aggiunte, eliminate e nome del metodo (ad oggi)
 				command = ECHO+version+" "+filename+" && git log --follow "
 						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
 						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+"\""+filename+"\"";	
@@ -1714,7 +1786,7 @@ public class Main {
 
 			}
 
-			runCommandOnShell(directory, command);
+			runCommandOnShellWithTid(directory, command,start);
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -2160,29 +2232,62 @@ public class Main {
 			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 			//per ogni versione nella primà metà delle release
-			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
+			//for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
+			int rel=1;//cancella questa riga
 
-				gitCheckoutAtGivenVersion(rel);
+			gitCheckoutAtGivenVersion(rel);
 
-				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-				//create repository with FinerGit------------------------------
-				runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
-				//-------------------------------------------------------------
+			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			//create repository with FinerGit------------------------------
+			//runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
+			//-------------------------------------------------------------
 
 
-				//search for java methods in the cloned repository         
-				File folder = new File(projectName+"_FinerGit_"+rel);
-				searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
-				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
 
-				calculateMethodsMetrics(rel);
-				System.out.println("Calculated metrics version "+rel);
-				fileMethodsOfTheCurrentRelease.clear();
+			//search for java methods in the cloned repository         
+			File folder = new File(projectName+"_FinerGit_"+rel);
+			searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
+			System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
+
+			//////////////////////////////////////////////
+			//initialize of thread boolean parameters 
+			for ( int i = 0; i <numOfThreads; i++)
+			{
+				for (int j=0;j<4; j++) {
+					calculatingMethodMetrics[i][j] = false;
+				}
+			}
+
+			ArrayList<Thread> threads= new ArrayList<Thread>();
+
+			for(int i = 0; i < numOfThreads; i++) {
+			
+			Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
+			t.start();
+			threads.add(t);
+			}
+			
+			try { 
+
+				for(int i = 0; i < numOfThreads; i++) {
+					threads.get(i).join();
+				}
+
 			} 
+			catch (InterruptedException exc) {
+				exc.printStackTrace();
+				Thread.currentThread().interrupt();
+				System.exit(-1);
+			}
+			////////////////////////////////////////////////
 
-			writeMethodMetricsResult();
+			System.out.println("Calculated metrics version "+rel);
+			fileMethodsOfTheCurrentRelease.clear();
+		} 
 
-		}
+		writeMethodMetricsResult();
+
+		//}
 
 		//----------------------------------------------------------------------------
 
@@ -2348,36 +2453,39 @@ public class Main {
 
 
 
-	private static void calculateMethodsMetrics(int version) {
+	private static void calculateMethodsMetrics(int version, int stride, int start) {
 
-		int count=0;
 		//per ogni metodo nella release (version)
-		for (String method : fileMethodsOfTheCurrentRelease) {
-			count++;
-			System.out.println("Inizio a calcolare metriche per metodo: "+count+"°, versione "+version);
+		for (int j = start; j < fileMethodsOfTheCurrentRelease.size(); j=j+stride) {
+			String method = fileMethodsOfTheCurrentRelease.get(j);
 
-			calculatingStmtMetricsMethodLevel = true;
+			calculatingMethodMetrics[start][0]=true;
 			//il metodo getFirstHalfMethodMetrics() creerà anche l'arrayList di entry LineOfMethodDataset
-			getFirstHalfMethodMetrics(method,version);
-			calculatingStmtMetricsMethodLevel = false;
+			getFirstHalfMethodMetrics(method,version,start);
+			calculatingMethodMetrics[start][0] = false;
 
-			if (lineOfMethod.getMethodHistories()!=0) {
-				calculatingElseMetricsMethodLevel=true;
-				getElseMetrics(method,version);
-				calculatingElseMetricsMethodLevel=false;
+			if (threadsLineOfMethod[start].getMethodHistories()!=0) {
+				calculatingMethodMetrics[start][1]=true;
+				getElseMetrics(method,version,start);
+				calculatingMethodMetrics[start][1]=false;
 
-				calculatingCondMetricMethodLevel=true;
-				getCondMetric(method,version);
-				calculatingCondMetricMethodLevel=false;
+				calculatingMethodMetrics[start][2]=true;
+				getCondMetric(method,version,start);
+				calculatingMethodMetrics[start][2]=false;
 
-				calculatingAuthMetricMethodLevel=true;
-				getNumberOfAuthorsOfMetod( method,version);
-				calculatingAuthMetricMethodLevel=false;
+				calculatingMethodMetrics[start][3]=true;
+				getNumberOfAuthorsOfMetod( method,version,start);
+				calculatingMethodMetrics[start][3]=false;
 			}
 			else { //no commit founded during this release on this method
-				arrayOfEntryOfMethodDataset.add(lineOfMethod);
+				arrayOfEntryOfMethodDataset.add(threadsLineOfMethod[start]);
 			}
+			//commenta queste due righe per non avere printf
+			counterMethods++;
+			System.out.println("metodo: "+counterMethods+"°, versione "+version);
+
 		}
+
 	}
 
 	private static void calculateCommitMetrics(int version) {
