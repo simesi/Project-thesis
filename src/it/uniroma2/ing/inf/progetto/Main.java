@@ -125,17 +125,14 @@ public class Main {
 	private static boolean calculatingLOCBeforeCommit=false;
 
 	private static final int numOfThreads= 10; //set this variable to set the number of threads
-	
-	
+
+
 	///////////////////////////////    used to set boolean conditions for every thread
 	private static Boolean[][] calculatingMethodMetrics = new Boolean[numOfThreads][4];////////////////////////////////
 	/////////////////////////////////
 
 	//this array has much dimensions as threads used, every field is the method upon a thread is working 
 	private static LineOfMethodDataset[] threadsLineOfMethod= new LineOfMethodDataset[numOfThreads];
-
-
-	//{new LineOfMethodDataset(0, null), new LineOfMethodDataset(0, null), 
 
 	private static LineOfClassDataset lineOfClassDataset;
 	private static LineOfCommitDataset lineOfCommit;
@@ -234,17 +231,17 @@ public class Main {
 		//nella working directory fornita. 
 		Process p = pb.start();
 
-		StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream(),tid);
+		//StreamGobbler errorGobbler = new StreamGobbler(p.getErrorStream(),tid);
 
 		StreamGobbler outputGobbler = new StreamGobbler(p.getInputStream(),tid);
 
 		outputGobbler.start();
 
-		errorGobbler.start();
+		//errorGobbler.start();
 
 		int exit = p.waitFor();
 
-		errorGobbler.join();
+		//errorGobbler.join();
 
 		outputGobbler.join();
 
@@ -289,7 +286,7 @@ public class Main {
 	}
 
 	private static class SimpleMethodMetricsRunner implements Runnable { 
-		int tid = 0; 
+		
 		private int start; 
 		private int stride;
 		private int rel;
@@ -972,7 +969,7 @@ public class Main {
 				nextLine =br.readLine();
 			}
 
-			if(numOfCommits==0) {
+			if(numOfCommits!=0) {
 				avgChurn=Math.floorDiv(Math.max((addedLines-deletedLines),0),numOfCommits);
 			}
 
@@ -2232,14 +2229,14 @@ public class Main {
 			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 			//per ogni versione nella primà metà delle release
-			//for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
-			int rel=1;//cancella questa riga
+			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
+			//int rel=1;//cancella questa riga
 
 			gitCheckoutAtGivenVersion(rel);
 
 			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 			//create repository with FinerGit------------------------------
-			//runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
+			runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
 			//-------------------------------------------------------------
 
 
@@ -2261,12 +2258,12 @@ public class Main {
 			ArrayList<Thread> threads= new ArrayList<Thread>();
 
 			for(int i = 0; i < numOfThreads; i++) {
-			
-			Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
-			t.start();
-			threads.add(t);
+
+				Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
+				t.start();
+				threads.add(t);
 			}
-			
+
 			try { 
 
 				for(int i = 0; i < numOfThreads; i++) {
@@ -2287,7 +2284,7 @@ public class Main {
 
 		writeMethodMetricsResult();
 
-		//}
+		}
 
 		//----------------------------------------------------------------------------
 
@@ -2457,6 +2454,7 @@ public class Main {
 
 		//per ogni metodo nella release (version)
 		for (int j = start; j < fileMethodsOfTheCurrentRelease.size(); j=j+stride) {
+		//for (int j = start; j < 100; j=j+stride) {
 			String method = fileMethodsOfTheCurrentRelease.get(j);
 
 			calculatingMethodMetrics[start][0]=true;
@@ -2600,7 +2598,12 @@ public class Main {
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getVersion()));
 				fileWriter.append(";");
-				fileWriter.append(line.getMethod());
+
+				int ind=line.getMethod().indexOf("."); //discard of ".mjava" form method name
+				if (ind!=-1){
+					fileWriter.append(line.getMethod().substring(0,ind).concat(".java"));
+				}
+				else  fileWriter.append(line.getMethod());
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMethodHistories()));
 				fileWriter.append(";");
@@ -2910,7 +2913,7 @@ public class Main {
 
 		try (FileWriter fileWriter = new FileWriter(outname)){
 
-
+   
 
 			fileWriter.append("Project;Release;Commit;NS;ND;"
 					+ "NF;Entropy;LA;LD;LT;"
