@@ -286,7 +286,7 @@ public class Main {
 	}
 
 	private static class SimpleMethodMetricsRunner implements Runnable { 
-		
+
 		private int start; 
 		private int stride;
 		private int rel;
@@ -2230,59 +2230,59 @@ public class Main {
 
 			//per ogni versione nella primà metà delle release
 			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
-			//int rel=1;//cancella questa riga
+				//int rel=1;//cancella questa riga
 
-			gitCheckoutAtGivenVersion(rel);
+				gitCheckoutAtGivenVersion(rel);
 
-			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-			//create repository with FinerGit------------------------------
-			runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
-			//-------------------------------------------------------------
+				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+				//create repository with FinerGit------------------------------
+				runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
+				//-------------------------------------------------------------
 
 
 
-			//search for java methods in the cloned repository         
-			File folder = new File(projectName+"_FinerGit_"+rel);
-			searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
-			System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
+				//search for java methods in the cloned repository         
+				File folder = new File(projectName+"_FinerGit_"+rel);
+				searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
+				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
 
-			//////////////////////////////////////////////
-			//initialize of thread boolean parameters 
-			for ( int i = 0; i <numOfThreads; i++)
-			{
-				for (int j=0;j<4; j++) {
-					calculatingMethodMetrics[i][j] = false;
+				//////////////////////////////////////////////
+				//initialize of thread boolean parameters 
+				for ( int i = 0; i <numOfThreads; i++)
+				{
+					for (int j=0;j<4; j++) {
+						calculatingMethodMetrics[i][j] = false;
+					}
 				}
-			}
 
-			ArrayList<Thread> threads= new ArrayList<Thread>();
-
-			for(int i = 0; i < numOfThreads; i++) {
-
-				Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
-				t.start();
-				threads.add(t);
-			}
-
-			try { 
+				ArrayList<Thread> threads= new ArrayList<Thread>();
 
 				for(int i = 0; i < numOfThreads; i++) {
-					threads.get(i).join();
+
+					Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
+					t.start();
+					threads.add(t);
 				}
 
+				try { 
+
+					for(int i = 0; i < numOfThreads; i++) {
+						threads.get(i).join();
+					}
+
+				} 
+				catch (InterruptedException exc) {
+					exc.printStackTrace();
+					Thread.currentThread().interrupt();
+					System.exit(-1);
+				}
+				////////////////////////////////////////////////
+
+				System.out.println("Calculated metrics version "+rel);
+				fileMethodsOfTheCurrentRelease.clear();
 			} 
-			catch (InterruptedException exc) {
-				exc.printStackTrace();
-				Thread.currentThread().interrupt();
-				System.exit(-1);
-			}
-			////////////////////////////////////////////////
 
-			System.out.println("Calculated metrics version "+rel);
-			fileMethodsOfTheCurrentRelease.clear();
-		} 
-
-		writeMethodMetricsResult();
+			writeMethodMetricsResult();
 
 		}
 
@@ -2454,7 +2454,7 @@ public class Main {
 
 		//per ogni metodo nella release (version)
 		for (int j = start; j < fileMethodsOfTheCurrentRelease.size(); j=j+stride) {
-		//for (int j = start; j < 100; j=j+stride) {
+			//for (int j = start; j < 100; j=j+stride) {
 			String method = fileMethodsOfTheCurrentRelease.get(j);
 
 			calculatingMethodMetrics[start][0]=true;
@@ -2599,9 +2599,13 @@ public class Main {
 				fileWriter.append(String.valueOf(line.getVersion()));
 				fileWriter.append(";");
 
-				int ind=line.getMethod().indexOf("."); //discard of ".mjava" form method name
+				int ind=line.getMethod().indexOf("."); 
 				if (ind!=-1){
-					fileWriter.append(line.getMethod().substring(0,ind).concat(".java"));
+					String myMethodName = line.getMethod().substring(0,ind);//discard of ".mjava" from method name
+					myMethodName = myMethodName.replace("#",".java#");//adding ".java" on class name
+
+					fileWriter.append(myMethodName.substring(0,ind));
+
 				}
 				else  fileWriter.append(line.getMethod());
 				fileWriter.append(";");
@@ -2913,7 +2917,7 @@ public class Main {
 
 		try (FileWriter fileWriter = new FileWriter(outname)){
 
-   
+
 
 			fileWriter.append("Project;Release;Commit;NS;ND;"
 					+ "NF;Entropy;LA;LD;LT;"
