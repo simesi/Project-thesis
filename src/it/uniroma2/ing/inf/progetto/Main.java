@@ -1237,7 +1237,7 @@ public class Main {
 					}
 
 					//abbiamo controllato tutte le versioni del file
-					if(count==Math.floorDiv(fromReleaseIndexToDate.size(),2)) {
+					if(count==Math.floorDiv(fromReleaseIndexToDate.size(),10)) {
 						break;
 					}
 				}
@@ -2182,7 +2182,7 @@ public class Main {
 
 			arrayOfEntryOfClassDataset= new ArrayList<>();
 			//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),2);i++) {
+			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),10);i++) {
 
 
 				gitCheckoutAtGivenVersion(i);
@@ -2229,7 +2229,7 @@ public class Main {
 			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 			//per ogni versione nella primà metà delle release
-			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
+			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),10);rel++) {
 				//int rel=1;//cancella questa riga
 
 				gitCheckoutAtGivenVersion(rel);
@@ -2300,7 +2300,7 @@ public class Main {
 
 
 			//per ogni versione nella primà metà delle release
-			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),2);rel++) {
+			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),10);rel++) {
 
 				gitCheckoutAtGivenVersion(rel);
 
