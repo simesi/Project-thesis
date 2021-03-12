@@ -5,6 +5,7 @@ public class LineOfMethodDataset {
 	private int version;//id release
 	private String method;
 	private int methodHistories;
+	private int LOC;
 	private int authors;
 	private int stmtAdded;
 	private int maxStmtAdded;
@@ -56,6 +57,18 @@ public class LineOfMethodDataset {
 	 */
 	public void setMethodHistories(int methodHistories) {
 		this.methodHistories = methodHistories;
+	}
+	/**
+	 * @return the lOC
+	 */
+	public int getLOC() {
+		return LOC;
+	}
+	/**
+	 * @param lOC the lOC to set
+	 */
+	public void setLOC(int lOC) {
+		LOC = lOC;
 	}
 	/**
 	 * @return the authors
@@ -240,6 +253,7 @@ public class LineOfMethodDataset {
 		this.method = method;
 		this.authors=0;
 		this.avgChurn=0;
+		this.LOC=0;
 		this.avgStmtAdded=0;
 		this.avgStmtDeleted=0;
 		this.churn=0;

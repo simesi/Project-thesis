@@ -128,7 +128,7 @@ public class Main {
 
 
 	///////////////////////////////    used to set boolean conditions for every thread
-	private static Boolean[][] calculatingMethodMetrics = new Boolean[numOfThreads][4];////////////////////////////////
+	private static Boolean[][] calculatingMethodMetrics = new Boolean[numOfThreads][5];////////////////////////////////
 	/////////////////////////////////
 
 	//this array has much dimensions as threads used, every field is the method upon a thread is working 
@@ -404,6 +404,9 @@ public class Main {
 						}
 						else if(calculatingMethodMetrics[tid][3]) {
 							getAuthMetricAtMethodLevel(line,br,tid);
+						}
+						else if(calculatingMethodMetrics[tid][4]) {
+							getLocMetricAtMethodLevel(line,br,tid);
 						}
 					}
 					/////////////////////////////////////////////
@@ -790,7 +793,7 @@ public class Main {
 
 			if (nAuth!=0) {
 				threadsLineOfMethod[tid].setAuthors(nAuth);
-				arrayOfEntryOfMethodDataset.add(threadsLineOfMethod[tid]);
+
 			}
 
 		}
@@ -1004,6 +1007,41 @@ public class Main {
 				threadsLineOfMethod[tid].setAvgStmtDeleted(Math.floorDiv(sumOfRealDeletedLOC, numOfCommitsWithDel));
 			}
 
+		}
+
+		private void getLocMetricAtMethodLevel(String line, BufferedReader br, int tid) throws IOException {
+			String version;
+			String nextLine;
+			int addedLines=0;
+			int deletedLines=0;
+
+
+			line=line.trim();
+			//"one or more whitespaces = \\s+"
+			String[] tokens = line.split("\\s+");
+
+			//operazioni per il primo output che è il numero di versione------------------------------
+			version=tokens[0];
+			String methodName=tokens[1];
+			//---------------------------------------------------------------------- 
+
+			//lettura prox riga					      					      
+			nextLine =br.readLine();
+
+			while (nextLine != null) {
+				nextLine=nextLine.trim();
+				tokens=nextLine.split("\\s+");
+
+				//si prende il primo valore (che sarà il numero di linee di codice aggiunte in un commit)
+				addedLines=addedLines+Integer.parseInt(tokens[0]);
+				//si prende il secondo valore (che sarà il numero di linee di codice rimosse in un commit)
+				deletedLines=deletedLines+Integer.parseInt(tokens[1]);
+
+				nextLine =br.readLine();
+			}
+
+			threadsLineOfMethod[tid].setLOC(Math.max(addedLines-deletedLines, 0));
+			arrayOfEntryOfMethodDataset.add(threadsLineOfMethod[tid]);
 		}
 
 		//per ogni commit si chiamerà questo metodo che ritorna i pathname dei file committati
@@ -1684,6 +1722,32 @@ public class Main {
 		}
 	}
 
+	private static void getLOC_Of_Method(String method, Integer version, int start) {
+
+		//directory da cui far partire il comando git    
+		Path directory = Paths.get(new File("").getAbsolutePath()+
+				SLASH+projectName+FINER_GIT+version);
+		String command;
+
+		try {    
+
+			//ritorna release e metodo (con il nome che aveva nella release version), poi righe aggiunte, eliminate e nome del metodo
+
+			command = ECHO+version+" "+method+" && git log --follow "+ 
+					"--until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+"\""+method+"\"";	
+
+
+			runCommandOnShellWithTid(directory, command,start);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			Thread.currentThread().interrupt();
+		}
+	}
+
 	private static void getCondMetric(String method, Integer version, int start) {
 		//directory da cui far partire il comando git    
 		Path directory = Paths.get(new File("").getAbsolutePath()+
@@ -1772,7 +1836,7 @@ public class Main {
 
 			if(version>1) {
 
-				//ritorna release e metodo (con il nome di allora), poi righe aggiunte, eliminate e nome del metodo (ad oggi)
+				//ritorna release e metodo (con il nome di allora), poi righe aggiunte, eliminate e nome del metodo
 				command = ECHO+version+" "+filename+" && git log --follow "
 						+"--since="+fromReleaseIndexToDate.get(String.valueOf(version-1))+ 
 						" --until="+fromReleaseIndexToDate.get(String.valueOf(version))+FORMATNUMSTAT+"\""+filename+"\"";	
@@ -2250,7 +2314,7 @@ public class Main {
 				//initialize of thread boolean parameters 
 				for ( int i = 0; i <numOfThreads; i++)
 				{
-					for (int j=0;j<4; j++) {
+					for (int j=0;j<5; j++) {
 						calculatingMethodMetrics[i][j] = false;
 					}
 				}
@@ -2458,7 +2522,6 @@ public class Main {
 			String method = fileMethodsOfTheCurrentRelease.get(j);
 
 			calculatingMethodMetrics[start][0]=true;
-			//il metodo getFirstHalfMethodMetrics() creerà anche l'arrayList di entry LineOfMethodDataset
 			getFirstHalfMethodMetrics(method,version,start);
 			calculatingMethodMetrics[start][0] = false;
 
@@ -2471,13 +2534,16 @@ public class Main {
 				getCondMetric(method,version,start);
 				calculatingMethodMetrics[start][2]=false;
 
-				calculatingMethodMetrics[start][3]=true;
-				getNumberOfAuthorsOfMetod( method,version,start);
-				calculatingMethodMetrics[start][3]=false;
 			}
-			else { //no commit founded during this release on this method
-				arrayOfEntryOfMethodDataset.add(threadsLineOfMethod[start]);
-			}
+
+			calculatingMethodMetrics[start][3]=true;
+			getNumberOfAuthorsOfMetod( method,version,start);
+			calculatingMethodMetrics[start][3]=false;
+
+			calculatingMethodMetrics[start][4]=true;
+			getLOC_Of_Method( method,version,start);
+			calculatingMethodMetrics[start][4]=false;
+
 			//commenta queste due righe per non avere printf
 			counterMethods++;
 			System.out.println("metodo: "+counterMethods+"°, versione "+version);
@@ -2588,7 +2654,7 @@ public class Main {
 
 
 
-			fileWriter.append("Project;Release;Method;methodHistories;authors;"
+			fileWriter.append("Project;Release;Method;methodHistories;LOC;authors;"
 					+ "stmtAdded;maxStmtAdded;avgStmtAdded;stmtDeleted;maxStmtDeleted;"
 					+ "avgStmtDeleted;Churn;MaxChurn;AvgChurn;cond;elseAdded;elseDeleted;Actual_Defective");
 			fileWriter.append("\n");
@@ -2607,9 +2673,13 @@ public class Main {
 					fileWriter.append(myMethodName.substring(0,ind));
 
 				}
-				else  fileWriter.append(line.getMethod());
+				else 
+					fileWriter.append(line.getMethod());
+				
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMethodHistories()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getLOC()));
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getAuthors()));
 				fileWriter.append(";");
