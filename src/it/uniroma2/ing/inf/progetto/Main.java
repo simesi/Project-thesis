@@ -57,6 +57,10 @@ public class Main {
 
 	private static String projectName="OPENJPA";
 	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
+	
+	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
+	
+	private static final String HARD_DRIVE_NAME="E:";
 
 	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
@@ -108,7 +112,7 @@ public class Main {
 	private static final String TOTAL= "total"; 
 	private static final String FORMAT_DATE= "yyyy-MM-dd";
 	private static final String RELEASE_DATE="releaseDate";
-	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
+	
 	private static final String FINER_GIT="_FinerGit_";
 
 
@@ -252,14 +256,14 @@ public class Main {
 		}
 	}
 	public static void runCommandOnShell(Path directory, String command) throws IOException, InterruptedException {
-		ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c","E: && cd "+directory.toString()+" && "+command);	
+		ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c",HARD_DRIVE_NAME+" && cd "+directory.toString()+" && "+command);	
 
 		runProcAndWait(pb);
 
 	}
 
 	public static void runCommandOnShellWithTid(Path directory, String command,Integer tid) throws IOException, InterruptedException {
-		ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c","E: && cd "+directory.toString()+" && "+command);	
+		ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c",HARD_DRIVE_NAME+" && cd "+directory.toString()+" && "+command);	
 
 		runProcWithTidAndWait(pb,tid);
 
