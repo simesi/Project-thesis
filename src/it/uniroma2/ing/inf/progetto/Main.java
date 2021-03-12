@@ -58,7 +58,7 @@ public class Main {
 	private static String projectName="OPENJPA";
 	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
 	
-	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";
+	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";// "C:\\users\\simone\\Desktop";
 	
 	private static final String HARD_DRIVE_NAME="E:";
 
@@ -755,7 +755,6 @@ public class Main {
 		private void getCommitIdForCommitLevel(String line, BufferedReader br) throws IOException {
 			String version;
 			String nextLine;
-			String commit;
 
 			line=line.trim();
 			String[] tokens = line.split("\\s+");
