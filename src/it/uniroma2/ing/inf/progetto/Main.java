@@ -55,17 +55,20 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName="OPENJPA";
-	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
-	
+	private static String projectName="MAHOUT";
+	private static String projectNameGit="apache/mahout.git";//"apache/bookkeeper.git";
+
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";// "C:\\users\\simone\\Desktop";
-	
+
 	private static final String HARD_DRIVE_NAME="E:";
 
-	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
+	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
+	private static final boolean doResearchQuest1 =true;
+	private static final boolean doResearchQuest2=false;
+	
 	//cancella questa variabile
 	static int counterMethods=0;////
 
@@ -112,7 +115,7 @@ public class Main {
 	private static final String TOTAL= "total"; 
 	private static final String FORMAT_DATE= "yyyy-MM-dd";
 	private static final String RELEASE_DATE="releaseDate";
-	
+
 	private static final String FINER_GIT="_FinerGit_";
 
 
@@ -1278,7 +1281,7 @@ public class Main {
 					}
 
 					//abbiamo controllato tutte le versioni del file
-					if(count==Math.floorDiv(fromReleaseIndexToDate.size(),10)) {
+					if(count==Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3)) {
 						break;
 					}
 				}
@@ -2200,9 +2203,9 @@ public class Main {
 
 		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 		try {
-			//ritorna gli id del commit e sul più vecchio si farà il checkout
+			//ritorna gli id dei commit e sul più vecchio si farà il checkout
 			String command = "git rev-list "
-					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master ";
+					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" trunk";//" master ";
 
 			doingCheckout =true;
 			runCommandOnShell(directory, command);
@@ -2225,53 +2228,10 @@ public class Main {
 
 		findNumberOfReleases();
 
-		try {
-			//si fa il clone della versione odierna del progetto
-			gitClone();	
-		}
-		catch (InterruptedException | IOException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-			System.exit(-1);
-		}	
-
-		//----------------------------------------------------------------------------
-
-		if(studyClassMetrics||studyCommitMetrics) {
-			//per la metrica di classe NFix e/o per la metrica di commit Fix 
-			//si popola l'array di TicketTakenFormJira per ogni bug
-			startToGetBugFixCommitFromJira();
-		}
+		if (doResearchQuest1){
 
 
-		//CLASS CLASSIFICATION
-		if(studyClassMetrics) {
-
-			arrayOfEntryOfClassDataset= new ArrayList<>();
-			//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Math.floorDiv(fromReleaseIndexToDate.size(),10);i++) {
-
-
-				gitCheckoutAtGivenVersion(i);
-
-
-				File folder = new File(projectName);
-				filepathsOfTheCurrentRelease = new ArrayList<>();
-				chgSetSizeList=new ArrayList<>();
-
-				//search for java files in the cloned repository
-				searchFileJava(folder, filepathsOfTheCurrentRelease);
-				System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
-
-				calculateClassMetrics(i);
-				filepathsOfTheCurrentRelease.clear();
-			}
-
-			//facciamo  un altro clone per poter calcolare la bugginess slla versione aggiornata del progetto
 			try {
-				//cancellazione della directory clonata del progetto (che non è aggiornata)   
-				recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-
 				//si fa il clone della versione odierna del progetto
 				gitClone();	
 			}
@@ -2279,124 +2239,172 @@ public class Main {
 				e.printStackTrace();
 				Thread.currentThread().interrupt();
 				System.exit(-1);
+			}	
+
+			//----------------------------------------------------------------------------
+
+			if(studyClassMetrics||studyCommitMetrics) {
+				//per la metrica di classe NFix e/o per la metrica di commit Fix 
+				//si popola l'array di TicketTakenFormJira per ogni bug
+				startToGetBugFixCommitFromJira();
 			}
 
-			// per calcolare metrica di classe Nfix
-			startToGetNFixAtClassLevelMetric();
 
-			writeClassMetricsResult();
-		}
+			//CLASS CLASSIFICATION
+			if(studyClassMetrics) {
 
-		//----------------------------------------------------------------------------
-
-		//METHOD CLASSIFICATION
-		if(studyMethodMetrics) {
-
-			fileMethodsOfTheCurrentRelease = new ArrayList<>();
-			arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
-
-			//per ogni versione nella primà metà delle release
-			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),10);rel++) {
-				//int rel=1;//cancella questa riga
-
-				gitCheckoutAtGivenVersion(rel);
-
-				Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-				//create repository with FinerGit------------------------------
-				runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
-				//-------------------------------------------------------------
+				arrayOfEntryOfClassDataset= new ArrayList<>();
+				//per ogni versione nella primà metà delle release
+				for(int i=1;i<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);i++) {
 
 
+					gitCheckoutAtGivenVersion(i);
 
-				//search for java methods in the cloned repository         
-				File folder = new File(projectName+"_FinerGit_"+rel);
-				searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
-				System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
 
-				//////////////////////////////////////////////
-				//initialize of thread boolean parameters 
-				for ( int i = 0; i <numOfThreads; i++)
-				{
-					for (int j=0;j<5; j++) {
-						calculatingMethodMetrics[i][j] = false;
-					}
+					File folder = new File(projectName);
+					filepathsOfTheCurrentRelease = new ArrayList<>();
+					chgSetSizeList=new ArrayList<>();
+
+					//search for java files in the cloned repository
+					searchFileJava(folder, filepathsOfTheCurrentRelease);
+					System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+
+					calculateClassMetrics(i);
+					filepathsOfTheCurrentRelease.clear();
 				}
 
-				ArrayList<Thread> threads= new ArrayList<Thread>();
+				//facciamo  un altro clone per poter calcolare la bugginess slla versione aggiornata del progetto
+				try {
+					//cancellazione della directory clonata del progetto (che non è aggiornata)   
+					recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 
-				for(int i = 0; i < numOfThreads; i++) {
-
-					Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
-					t.start();
-					threads.add(t);
+					//si fa il clone della versione odierna del progetto
+					gitClone();	
 				}
-
-				try { 
-
-					for(int i = 0; i < numOfThreads; i++) {
-						threads.get(i).join();
-					}
-
-				} 
-				catch (InterruptedException exc) {
-					exc.printStackTrace();
+				catch (InterruptedException | IOException e) {
+					e.printStackTrace();
 					Thread.currentThread().interrupt();
 					System.exit(-1);
 				}
-				////////////////////////////////////////////////
 
-				System.out.println("Calculated metrics version "+rel);
-				fileMethodsOfTheCurrentRelease.clear();
-			} 
+				// per calcolare metrica di classe Nfix
+				startToGetNFixAtClassLevelMetric();
 
-			writeMethodMetricsResult();
-
-		}
-
-		//----------------------------------------------------------------------------
-
-		//COMMIT CLASSIFICATION
-		if(studyCommitMetrics) {
-
-			commitOfCurrentRelease = new ArrayList<>();
-			arrayOfEntryOfCommitDataset = new ArrayList<>();
-			modifiedFilesOfCommit = new ArrayList<>();
-			modifiedSubOfCommit= new ArrayList<>();
-			listOfDaysPassedBetweenCommits=new ArrayList<>();
-
-
-
-			//per ogni versione nella primà metà delle release
-			for(int rel=1;rel<=Math.floorDiv(fromReleaseIndexToDate.size(),10);rel++) {
-
-				gitCheckoutAtGivenVersion(rel);
-
-				calculatingCommitInRelease=true;
-				//search for commits in the release in the cloned repository         
-				SearchForCommitsOfGivenRelease(rel);
-				calculatingCommitInRelease=false;
-
-				System.out.println("Founded "+commitOfCurrentRelease.size()+" commits on release "+rel);
-
-				calculateCommitMetrics(rel);
-				System.out.println("Calculated metrics version "+rel);
-
-				commitOfCurrentRelease.clear();
+				writeClassMetricsResult();
 			}
 
-			getBugFixCommitsFromGitAndSetFixMetric();
+			//----------------------------------------------------------------------------
 
-			writeCommitMetricsResult();
+			//METHOD CLASSIFICATION
+			if(studyMethodMetrics) {
+
+				fileMethodsOfTheCurrentRelease = new ArrayList<>();
+				arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
+
+				//per ogni versione nella primà metà delle release
+				for(int rel=1;rel<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);rel++) {
+					//int rel=1;//cancella questa riga
+
+					gitCheckoutAtGivenVersion(rel);
+
+					Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+					//create repository with FinerGit------------------------------
+					runFinerGitCloneForVersion(directory,rel); // commenta per non produrre i file metodo Finergit
+					//-------------------------------------------------------------
+
+
+
+					//search for java methods in the cloned repository         
+					File folder = new File(projectName+"_FinerGit_"+rel);
+					searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
+					System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
+
+					//////////////////////////////////////////////
+					//initialize of thread boolean parameters 
+					for ( int i = 0; i <numOfThreads; i++)
+					{
+						for (int j=0;j<5; j++) {
+							calculatingMethodMetrics[i][j] = false;
+						}
+					}
+
+					ArrayList<Thread> threads= new ArrayList<Thread>();
+
+					for(int i = 0; i < numOfThreads; i++) {
+
+						Thread t = new Thread(new SimpleMethodMetricsRunner(numOfThreads,i,rel));
+						t.start();
+						threads.add(t);
+					}
+
+					try { 
+
+						for(int i = 0; i < numOfThreads; i++) {
+							threads.get(i).join();
+						}
+
+					} 
+					catch (InterruptedException exc) {
+						exc.printStackTrace();
+						Thread.currentThread().interrupt();
+						System.exit(-1);
+					}
+					////////////////////////////////////////////////
+
+					System.out.println("Calculated metrics version "+rel);
+					fileMethodsOfTheCurrentRelease.clear();
+				} 
+
+				writeMethodMetricsResult();
+
+			}
+
+			//----------------------------------------------------------------------------
+
+			//COMMIT CLASSIFICATION
+			if(studyCommitMetrics) {
+
+				commitOfCurrentRelease = new ArrayList<>();
+				arrayOfEntryOfCommitDataset = new ArrayList<>();
+				modifiedFilesOfCommit = new ArrayList<>();
+				modifiedSubOfCommit= new ArrayList<>();
+				listOfDaysPassedBetweenCommits=new ArrayList<>();
+
+
+
+				//per ogni versione nella primà metà delle release
+				for(int rel=1;rel<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);rel++) {
+
+					gitCheckoutAtGivenVersion(rel);
+
+					calculatingCommitInRelease=true;
+					//search for commits in the release in the cloned repository         
+					SearchForCommitsOfGivenRelease(rel);
+					calculatingCommitInRelease=false;
+
+					System.out.println("Founded "+commitOfCurrentRelease.size()+" commits on release "+rel);
+
+					calculateCommitMetrics(rel);
+					System.out.println("Calculated metrics version "+rel);
+
+					commitOfCurrentRelease.clear();
+				}
+
+				getBugFixCommitsFromGitAndSetFixMetric();
+
+				writeCommitMetricsResult();
+			}
+
+			//cancellazione directory clonata locale del progetto   
+			recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 		}
 
-		//cancellazione directory clonata locale del progetto   
-		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 		//----------------------------------------------------------------------------
+		if (doResearchQuest2) {
 
-		////MILESTONE 2 DELIVERABLE 2
 
-		//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
-		/*
+			//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
+			/*
 		projectName= "OPENJPA";
 
 		outname = projectName + " Deliverable 2 Milestone 1.csv";
@@ -2479,7 +2487,8 @@ public class Main {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		 */
+			 */
+		}
 	}
 
 	private static void calculateClassMetrics(int version) {
@@ -2673,12 +2682,12 @@ public class Main {
 					String myMethodName = line.getMethod().substring(0,ind);//discard of ".mjava" from method name
 					myMethodName = myMethodName.replace("#",".java#");//adding ".java" on class name
 
-					fileWriter.append(myMethodName.substring(0,ind));
+					fileWriter.append(myMethodName);
 
 				}
 				else 
 					fileWriter.append(line.getMethod());
-				
+
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getMethodHistories()));
 				fileWriter.append(";");
