@@ -171,6 +171,18 @@ public class Main {
 		return json;
 	}
 
+		private static void gitCheckoutToHead() throws IOException, InterruptedException {
+
+			Path directory;
+			
+			directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			String command = "git checkout master";	
+
+			runCommandOnShell(directory, command);
+			
+		}
+	
+	
 	//questo metodo fa il 'git clone' della repository (necessario per poter ricavare successivamente il log dei commit)   
 	private static void gitClone() throws IOException, InterruptedException {
 
@@ -2276,11 +2288,8 @@ public class Main {
 
 				//facciamo  un altro clone per poter calcolare la bugginess slla versione aggiornata del progetto
 				try {
-					//cancellazione della directory clonata del progetto (che non è aggiornata)   
-					recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-
-					//si fa il clone della versione odierna del progetto
-					gitClone();	
+					//si ritorna alla versione odierna del progetto
+					gitCheckoutToHead();	
 				}
 				catch (InterruptedException | IOException e) {
 					e.printStackTrace();
