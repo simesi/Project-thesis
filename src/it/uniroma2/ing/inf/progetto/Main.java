@@ -63,8 +63,8 @@ public class Main {
 	private static final String HARD_DRIVE_NAME="E:";
 
 	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
-	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
+	private static boolean studyClassMetrics=true; //calcola le metriche di classe
+	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
 
 	private static final boolean doResearchQuest1 =true;
 	private static final boolean doResearchQuest2=false;
@@ -1260,8 +1260,9 @@ public class Main {
 			int count=0;
 
 			//se è la prima versione
-			if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))){
-				fixedVers= String.valueOf(2);
+			if (date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(1)))
+					||date.atStartOfDay().isBefore(fromReleaseIndexToDate.get(String.valueOf(1)))){
+				fixedVers= String.valueOf(1);
 			}
 			else {
 				fixedVers=iterateForFixVersion(date);
@@ -1304,7 +1305,7 @@ public class Main {
 				if ((date.atStartOfDay().isAfter(fromReleaseIndexToDate.get(String.valueOf(a)))
 						&&(date.atStartOfDay().isBefore(fromReleaseIndexToDate.get(String.valueOf(a+1)))||
 								(date.atStartOfDay().isEqual(fromReleaseIndexToDate.get(String.valueOf(a+1))))))) {
-					return String.valueOf(a+2);
+					return String.valueOf(a+1);
 
 				}
 			}
