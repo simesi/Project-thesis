@@ -55,8 +55,8 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName="MAHOUT";
-	private static String projectNameGit="apache/mahout.git";//"apache/bookkeeper.git";
+	private static String projectName="OPENJPA";
+	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
 
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";// "C:\\users\\simone\\Desktop";
 
@@ -1614,8 +1614,6 @@ public class Main {
 
 				fileRenamed=f.getAbsolutePath().replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString(), "");
 
-				//ci si costruisce una HashMap con la data di creazione dei file java
-
 				//il comando git log prende percorsi con la '/'
 				fileRenamed= fileRenamed.replace("\\", "/");
 				result.add(fileRenamed);
@@ -2218,7 +2216,7 @@ public class Main {
 		try {
 			//ritorna gli id dei commit e sul più vecchio si farà il checkout
 			String command = "git rev-list "
-					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" trunk";//" master ";
+					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master";//" master ";
 
 			doingCheckout =true;
 			runCommandOnShell(directory, command);
