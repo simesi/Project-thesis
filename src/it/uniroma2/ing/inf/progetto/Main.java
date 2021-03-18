@@ -682,6 +682,7 @@ public class Main {
 			String nextLine;
 			String commit;
 			int numFile=0;
+			int modifiedLines=0;
 			int realAddedLines=0;
 			int realDeletedLOC=0;
 			String fullFilePath;
@@ -712,6 +713,9 @@ public class Main {
 				realAddedLines +=Math.max((Integer.parseInt(tokens[0])-Integer.parseInt(tokens[1])),0);
 				realDeletedLOC+=Math.max((Integer.parseInt(tokens[1])-Integer.parseInt(tokens[0])),0);
 
+				//for size
+				modifiedLines= modifiedLines +Integer.parseInt(tokens[0])+Integer.parseInt(tokens[1]);
+				
 				//for entropy
 				if (Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]))>0) {
 					arrModifiedLines.add(Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1])));
@@ -744,7 +748,7 @@ public class Main {
 
 			lineOfCommit = new LineOfCommitDataset(Integer.parseInt(version), commit);
 			lineOfCommit.setLineAdded(realAddedLines);
-			lineOfCommit.setSize(realAddedLines+realDeletedLOC);
+			lineOfCommit.setSize(modifiedLines);
 			lineOfCommit.setLineDeleted(realDeletedLOC);
 			lineOfCommit.setNumModFiles(numFile);
 			lineOfCommit.setNumModDir(arrDirList.size());
