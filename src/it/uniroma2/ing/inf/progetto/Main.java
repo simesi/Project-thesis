@@ -55,8 +55,8 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName="OPENJPA";
-	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
+	private static String projectName="NUTCH";
+	private static String projectNameGit="apache/nutch.git";//"apache/bookkeeper.git";
 
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";// "C:\\users\\simone\\Desktop";
 
@@ -64,11 +64,11 @@ public class Main {
 
 	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=true; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
 	private static final boolean doResearchQuest1 =true;
 	private static final boolean doResearchQuest2=false;
-	
+
 	//cancella questa variabile
 	static int counterMethods=0;////
 
@@ -171,24 +171,24 @@ public class Main {
 		return json;
 	}
 
-		private static void gitCheckoutToHead() throws IOException, InterruptedException {
+	private static void gitCheckoutToHead() throws IOException, InterruptedException {
 
-			Path directory;
-			
-			directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-			String command = "git checkout master";	
+		Path directory;
 
-			runCommandOnShell(directory, command);
-			
-		}
-	
-	
+		directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+		String command = "git checkout master"; //master	
+
+		runCommandOnShell(directory, command);
+
+	}
+
+
 	//questo metodo fa il 'git clone' della repository (necessario per poter ricavare successivamente il log dei commit)   
 	private static void gitClone() throws IOException, InterruptedException {
 
 		Path directory;
 		String originUrl = "https://github.com/"+projectNameGit;
-
+		
 
 		directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 
@@ -744,6 +744,7 @@ public class Main {
 
 			lineOfCommit = new LineOfCommitDataset(Integer.parseInt(version), commit);
 			lineOfCommit.setLineAdded(realAddedLines);
+			lineOfCommit.setSize(realAddedLines+realDeletedLOC);
 			lineOfCommit.setLineDeleted(realDeletedLOC);
 			lineOfCommit.setNumModFiles(numFile);
 			lineOfCommit.setNumModDir(arrDirList.size());
@@ -1216,7 +1217,7 @@ public class Main {
 				}
 				//si prende solo l'ultimo commit dello stream (il più vecchio) e si fa il checkout
 				command = "git checkout "+myCommit;	
-
+                System.out.println("dir "+directory+" command: "+command);
 				runCommandOnShell(directory, command);
 
 			} catch (IOException e) {
@@ -2200,13 +2201,15 @@ public class Main {
 		//popolo un'HasMap con associazione indice di release-data delle release
 		for ( i = 1; i <= releases.size(); i++) {
 			fromReleaseIndexToDate.put(i.toString(),releases.get(i-1));
+			System.out.println("Release "+i+" si chiama: "+releaseNames.get(releases.get(i-1))+" "+fromReleaseIndexToDate.get(i.toString()));
+			
 		}
 
 
 		//cancellazione preventiva della directory clonata del progetto (se esiste)   
-		recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-
-
+		//recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
+		
+		
 	}
 
 	//questo metodo fa il checkout della repository per ottenerne lo stato visibile alla versione passatagli
@@ -2241,7 +2244,7 @@ public class Main {
 
 		if (doResearchQuest1){
 
-
+			/*    queste righe alla fine vanno eseguite!
 			try {
 				//si fa il clone della versione odierna del progetto
 				gitClone();	
@@ -2251,7 +2254,7 @@ public class Main {
 				Thread.currentThread().interrupt();
 				System.exit(-1);
 			}	
-
+			 */
 			//----------------------------------------------------------------------------
 
 			if(studyClassMetrics||studyCommitMetrics) {
@@ -2266,7 +2269,10 @@ public class Main {
 
 				arrayOfEntryOfClassDataset= new ArrayList<>();
 				//per ogni versione nella primà metà delle release
-				for(int i=1;i<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);i++) {
+			for(int i=1;i<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);i++) {
+
+					//for(int i=1;i<=1;i++) { //COMMENTA QUESTA RIGA
+
 
 
 					gitCheckoutAtGivenVersion(i);
@@ -2501,7 +2507,7 @@ public class Main {
 
 	private static void calculateClassMetrics(int version) {
 
-
+		counterMethods=0;
 
 		//per ogni file nella release (version)
 		for (String s : filepathsOfTheCurrentRelease) {
@@ -2526,9 +2532,13 @@ public class Main {
 			getChgSetMetrics(s,version);
 			calculatingChgSetSizePhaseOne=false;
 
+			counterMethods++;
+			if(Math.floorMod(counterMethods, 10)==0) {
+				System.out.println("Calcolato fino alla "+counterMethods+"° classe");
+			}
 		}
 		System.out.println("########## Evaluated metrics for version "+version+"############");
-
+		counterMethods=0;
 
 	}
 
@@ -3028,6 +3038,8 @@ public class Main {
 				fileWriter.append(String.valueOf(line.getNumModFiles()));
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getEntropy()));
+				fileWriter.append(";");
+				fileWriter.append(String.valueOf(line.getSize()));
 				fileWriter.append(";");
 				fileWriter.append(String.valueOf(line.getLineAdded()));
 				fileWriter.append(";");

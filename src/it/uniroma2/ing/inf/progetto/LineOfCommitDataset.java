@@ -10,6 +10,7 @@ public class LineOfCommitDataset {
 	private double entropy;
 	private int lineAdded;
 	private int lineDeleted;
+	private int size;
 	private int lineBeforeChange;
 	private String defectFix;
 	private int numDev;
@@ -173,6 +174,18 @@ public class LineOfCommitDataset {
 		this.exp = exp;
 	}
 	/**
+	 * @return the size
+	 */
+	public int getSize() {
+		return size;
+	}
+	/**
+	 * @param size the size to set
+	 */
+	public void setSize(int size) {
+		this.size = size;
+	}
+	/**
 	 * @return the recentExp
 	 */
 	public double getRecentExp() {
@@ -234,6 +247,7 @@ public class LineOfCommitDataset {
 		this.numModSub=0;
 		this.numModDir = 0;
 		this.entropy = 0;
+		this.size=0;
 		this.lineAdded = 0;
 		this.lineDeleted = 0;
 		this.lineBeforeChange = 0;
