@@ -63,7 +63,7 @@ public class Main {
 	private static final String HARD_DRIVE_NAME="E:";
 
 	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
-	private static boolean studyClassMetrics=true; //calcola le metriche di classe
+	private static boolean studyClassMetrics=false; //calcola le metriche di classe
 	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
 	private static final boolean doResearchQuest1 =true;
@@ -3020,7 +3020,7 @@ public class Main {
 
 
 			fileWriter.append("Project;Release;Commit;NS;ND;"
-					+ "NF;Entropy;LA;LD;LT;"
+					+ "NF;Entropy;Size;LA;LD;LT;"
 					+ "FIX;NDEV;AGE;NUC;EXP;REXP;SEXP;Actual_Defective");
 			fileWriter.append("\n");
 			for ( LineOfCommitDataset line : arrayOfEntryOfCommitDataset) {
