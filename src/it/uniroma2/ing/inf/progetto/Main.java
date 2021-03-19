@@ -55,8 +55,8 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName="NUTCH";
-	private static String projectNameGit="apache/nutch.git";//"apache/bookkeeper.git";
+	private static String projectName="GROOVY";
+	private static String projectNameGit="apache/derby.git";//"apache/bookkeeper.git";
 
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";// "C:\\users\\simone\\Desktop";
 
@@ -1299,7 +1299,8 @@ public class Main {
 					}
 
 					//abbiamo controllato tutte le versioni del file
-					if(count==Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3)) {
+					if(count== Integer.min(
+							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
 						break;
 					}
 				}
@@ -2273,7 +2274,7 @@ public class Main {
 
 				arrayOfEntryOfClassDataset= new ArrayList<>();
 				//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);i++) {
+			for(int i=1;i<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);i++) {
 
 					//for(int i=1;i<=1;i++) { //COMMENTA QUESTA RIGA
 
@@ -2320,7 +2321,7 @@ public class Main {
 				arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 				//per ogni versione nella primà metà delle release
-				for(int rel=1;rel<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);rel++) {
+				for(int rel=1;rel<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);rel++) {
 					//int rel=1;//cancella questa riga
 
 					gitCheckoutAtGivenVersion(rel);
@@ -2391,7 +2392,7 @@ public class Main {
 
 
 				//per ogni versione nella primà metà delle release
-				for(int rel=1;rel<=Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3);rel++) {
+				for(int rel=1;rel<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);rel++) {
 
 					gitCheckoutAtGivenVersion(rel);
 
