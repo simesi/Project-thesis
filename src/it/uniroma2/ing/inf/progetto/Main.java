@@ -55,8 +55,8 @@ import java.io.FileWriter;
  */
 public class Main {
 
-	private static String projectName="GROOVY";
-	private static String projectNameGit="apache/derby.git";//"apache/bookkeeper.git";
+	private static String projectName="OPENJPA";
+	private static String projectNameGit="apache/openjpa.git";//"apache/bookkeeper.git";
 
 	private static final String PATH_TO_FINER_GIT_JAR="E:\\FinerGit\\FinerGit\\build\\libs";// "C:\\users\\simone\\Desktop";
 
@@ -64,10 +64,10 @@ public class Main {
 
 	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
 	private static boolean studyClassMetrics=false; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
+	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
 
-	private static final boolean doResearchQuest1 =true;
-	private static final boolean doResearchQuest2=false;
+	private static final boolean doResearchQuest1 =false;
+	private static final boolean doResearchQuest2=true;
 
 	//cancella questa variabile
 	static int counterMethods=0;////
@@ -176,7 +176,7 @@ public class Main {
 		Path directory;
 
 		directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-		String command = "git checkout master"; //master	
+		String command = "git checkout trunk"; //master	
 
 		runCommandOnShell(directory, command);
 
@@ -188,7 +188,7 @@ public class Main {
 
 		Path directory;
 		String originUrl = "https://github.com/"+projectNameGit;
-		
+
 
 		directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
 
@@ -533,7 +533,8 @@ public class Main {
 
 				DateCommit = LocalDate.parse(tokens[0],format);
 				years= Math.toIntExact(ChronoUnit.YEARS.between(DateCommit,actualDateCommit));
-				recExp+= (double)1/(double)(years+1);
+				if (years>0) 
+					recExp+= (double)1/(double)(years+1);
 
 				nextLine =br.readLine();
 			}
@@ -715,7 +716,7 @@ public class Main {
 
 				//for size
 				modifiedLines= modifiedLines +Integer.parseInt(tokens[0])+Integer.parseInt(tokens[1]);
-				
+
 				//for entropy
 				if (Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1]))>0) {
 					arrModifiedLines.add(Math.min(Integer.parseInt(tokens[0]), Integer.parseInt(tokens[1])));
@@ -1221,7 +1222,7 @@ public class Main {
 				}
 				//si prende solo l'ultimo commit dello stream (il più vecchio) e si fa il checkout
 				command = "git checkout "+myCommit;	
-                System.out.println("dir "+directory+" command: "+command);
+				System.out.println("dir "+directory+" command: "+command);
 				runCommandOnShell(directory, command);
 
 			} catch (IOException e) {
@@ -2207,14 +2208,14 @@ public class Main {
 		for ( i = 1; i <= releases.size(); i++) {
 			fromReleaseIndexToDate.put(i.toString(),releases.get(i-1));
 			System.out.println("Release "+i+" si chiama: "+releaseNames.get(releases.get(i-1))+" "+fromReleaseIndexToDate.get(i.toString()));
-			
+
 		}
 
 
 		//cancellazione preventiva della directory clonata del progetto (se esiste)   
 		//recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
-		
-		
+
+
 	}
 
 	//questo metodo fa il checkout della repository per ottenerne lo stato visibile alla versione passatagli
@@ -2224,7 +2225,7 @@ public class Main {
 		try {
 			//ritorna gli id dei commit e sul più vecchio si farà il checkout
 			String command = "git rev-list "
-					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" master";//" master ";
+					+ "--after="+fromReleaseIndexToDate.get(String.valueOf(version))+" trunk";//" master ";
 
 			doingCheckout =true;
 			runCommandOnShell(directory, command);
@@ -2274,7 +2275,7 @@ public class Main {
 
 				arrayOfEntryOfClassDataset= new ArrayList<>();
 				//per ogni versione nella primà metà delle release
-			for(int i=1;i<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);i++) {
+				for(int i=1;i<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);i++) {
 
 					//for(int i=1;i<=1;i++) { //COMMENTA QUESTA RIGA
 
@@ -2321,7 +2322,7 @@ public class Main {
 				arrayOfEntryOfMethodDataset = new ArrayList<LineOfMethodDataset>();
 
 				//per ogni versione nella primà metà delle release
-				for(int rel=1;rel<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);rel++) {
+				for(int rel=3;rel<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);rel++) {
 					//int rel=1;//cancella questa riga
 
 					gitCheckoutAtGivenVersion(rel);
@@ -2371,9 +2372,10 @@ public class Main {
 					////////////////////////////////////////////////
 
 					System.out.println("Calculated metrics version "+rel);
+					//writeMethodMetricsResult(rel);// COMMENTA QUESTA LINEA	!!!!
 					fileMethodsOfTheCurrentRelease.clear();
 				} 
-
+					
 				writeMethodMetricsResult();
 
 			}
@@ -2420,8 +2422,25 @@ public class Main {
 
 		//----------------------------------------------------------------------------
 		if (doResearchQuest2) {
-
-
+			//init of an array of model names
+              ArrayList<String> models= new ArrayList<>();
+              models.add("Random Forest");
+              models.add("SVM");
+              models.add("Bayesian Network");
+              models.add("J48");
+              
+			if(studyClassMetrics) {
+				for(int i=0;i<4;i++) {
+					
+				
+				String outname = projectName + "_Class_"+model+".csv";
+				}
+			}
+			else if (studyMethodMetrics) {
+				
+			}
+			else if (studyCommitMetrics) {
+			}
 			//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
 			/*
 		projectName= "OPENJPA";
@@ -2595,9 +2614,10 @@ public class Main {
 
 			counter++;
 			if(Math.floorMod(counter, 10)==0) {
-				System.out.println("Commit "+counter+" release "+version);
+				System.out.println("Commit "+counter+" "+commit+" release "+version);
 			}
-
+			////////////////
+			System.out.println("Working on commit:"+commit);
 
 			calculatingFirstHalfCommitMetrics = true;
 			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
@@ -2612,6 +2632,7 @@ public class Main {
 			getAuthorOfCommit(commit);
 			calculatingAuthorOfCommit=false;
 
+			
 			calculatingSexp=true;
 			getSexpCommitLevel(commit);
 			calculatingSexp=false;
@@ -2620,7 +2641,7 @@ public class Main {
 			getExpCommitLevel(commit);
 			calculatingExp=false;
 
-
+			System.out.println("Founded "+modifiedFilesOfCommit.size()+" file changed");
 			//ora per le metriche AGE e REXP  -----------------
 			//per ogni file occorre calcolare la data dell'ultimo commit avvenuto
 			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
@@ -2681,10 +2702,13 @@ public class Main {
 		}
 	}
 
+
+	//private static void writeMethodMetricsResult(int rel) {
 	private static void writeMethodMetricsResult() {
+		//String outname = projectName + "_Method_Until_"+rel+".csv";
 		String outname = projectName + "_Method.csv";
 		//Name of CSV for output
-
+//-------------------------------------------------------------------------
 		try (FileWriter fileWriter = new FileWriter(outname)){
 
 
@@ -2929,9 +2953,14 @@ public class Main {
 	private static void calculateAgeCommitLevel(){
 		int age=0;
 		for (int i = 0; i < listOfDaysPassedBetweenCommits.size(); i++) {
+			if (listOfDaysPassedBetweenCommits.get(i)<0) {
+				listOfDaysPassedBetweenCommits.remove(i);
+				continue;
+			}
 			age+=listOfDaysPassedBetweenCommits.get(i);	
 		}
-		age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
+		if(listOfDaysPassedBetweenCommits.size()!=0)
+			age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
 		lineOfCommit.setAge(age);
 	}
 
