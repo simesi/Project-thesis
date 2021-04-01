@@ -7,10 +7,16 @@ import java.io.Reader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
+import java.io.FileReader;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.opencsv.CSVParser;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -144,6 +150,13 @@ public class Main {
 	private static LineOfClassDataset lineOfClassDataset;
 	private static LineOfCommitDataset lineOfCommit;
 	private static TicketTakenFromJIRA ticket;
+
+	//-------------------------------
+	//RQ2
+	private static final String dir= "Results RQ1";
+	private static List<String> filesPath;
+	private static String csvTrain;
+	private static String csvTest;
 
 	//--------------------------
 
@@ -2375,7 +2388,7 @@ public class Main {
 					//writeMethodMetricsResult(rel);// COMMENTA QUESTA LINEA	!!!!
 					fileMethodsOfTheCurrentRelease.clear();
 				} 
-					
+
 				writeMethodMetricsResult();
 
 			}
@@ -2423,26 +2436,47 @@ public class Main {
 		//----------------------------------------------------------------------------
 		if (doResearchQuest2) {
 			//init of an array of model names
-              ArrayList<String> models= new ArrayList<>();
-              models.add("Random Forest");
-              models.add("SVM");
-              models.add("Bayesian Network");
-              models.add("J48");
-              
-			if(studyClassMetrics) {
-				for(int i=0;i<4;i++) {
+			ArrayList<String> models= new ArrayList<>();
+			models.add("Random Forest");
+			models.add("SVM");
+			models.add("Bayesian Network");
+			models.add("J48");
+
+			final File folder = new File(dir);
+			filesPath = new ArrayList<>();
+			//populate filesPath array with the paths of the metric files obtained for RQ1
+			listFiles(folder);
+
+			for (String file : filesPath) {
+
+				//ora si scandisce ogni file con le metriche creato per RQ1  				
+				//CSVParser parser = new CSVParserBuilder().withSeparator(';').build();
+
+
+				// Read existing file skipping the header
+				//CSVReader reader= new CSVReaderBuilder(
+				//		new FileReader(file)).withCSVParser(parser).withSkipLines(1).build();
+
+
+
+				if(studyClassMetrics) {
+					for (String model:models) {
+						
 					
-				
-				String outname = projectName + "_Class_"+model+".csv";
+					csvTrain = projectName+"_Train_"+model+".csv";
+					csvTest = projectName+"_Test_"+model+".csv";	
+
+					String outname = projectName + "_Class_"+model+".csv";
+					}
 				}
-			}
-			else if (studyMethodMetrics) {
 				
-			}
-			else if (studyCommitMetrics) {
-			}
-			//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
-			/*
+				else if (studyMethodMetrics) {
+
+				}
+				else if (studyCommitMetrics) {
+				}
+				//creo due file CSV (uno per il training con le vecchie release e uno per il testing) per ogni release
+				/*
 		projectName= "OPENJPA";
 
 		outname = projectName + " Deliverable 2 Milestone 1.csv";
@@ -2525,586 +2559,596 @@ public class Main {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-			 */
-		}
-	}
-
-	private static void calculateClassMetrics(int version) {
-
-		counterMethods=0;
-
-		//per ogni file nella release (version)
-		for (String s : filepathsOfTheCurrentRelease) {
-
-			calculatingIncrementalMetrics = true;
-			//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
-			getLOCMetric(s,version);
-			calculatingIncrementalMetrics = false;
-			calculatingNotIncrementalMetrics = true;
-			//i metodi successivi modificano semplicemente le entry in quell'array
-			getNotIncrementalMetrics(s,version);
-			calculatingNotIncrementalMetrics = false;
-			calculatingAuthClassLevel= true;
-			getNumberOfAuthorsClassLevel(s,version);
-			calculatingAuthClassLevel= false;
-
-			calculatingAge=true;
-			getAgeMetrics(s,version);
-			calculatingAge=false;
-
-			calculatingChgSetSizePhaseOne=true;
-			getChgSetMetrics(s,version);
-			calculatingChgSetSizePhaseOne=false;
-
-			counterMethods++;
-			if(Math.floorMod(counterMethods, 10)==0) {
-				System.out.println("Calcolato fino alla "+counterMethods+"° classe");
+				 */
 			}
 		}
-		System.out.println("########## Evaluated metrics for version "+version+"############");
-		counterMethods=0;
+		}
 
-	}
+		private static void calculateClassMetrics(int version) {
 
+			counterMethods=0;
 
+			//per ogni file nella release (version)
+			for (String s : filepathsOfTheCurrentRelease) {
 
-	private static void calculateMethodsMetrics(int version, int stride, int start) {
+				calculatingIncrementalMetrics = true;
+				//il metodo getLOCMetric creerà anche l'arrayList di entry LineOfDataSet
+				getLOCMetric(s,version);
+				calculatingIncrementalMetrics = false;
+				calculatingNotIncrementalMetrics = true;
+				//i metodi successivi modificano semplicemente le entry in quell'array
+				getNotIncrementalMetrics(s,version);
+				calculatingNotIncrementalMetrics = false;
+				calculatingAuthClassLevel= true;
+				getNumberOfAuthorsClassLevel(s,version);
+				calculatingAuthClassLevel= false;
 
-		//per ogni metodo nella release (version)
-		for (int j = start; j < fileMethodsOfTheCurrentRelease.size(); j=j+stride) {
-			//for (int j = start; j < 100; j=j+stride) {
-			String method = fileMethodsOfTheCurrentRelease.get(j);
+				calculatingAge=true;
+				getAgeMetrics(s,version);
+				calculatingAge=false;
 
-			calculatingMethodMetrics[start][0]=true;
-			getFirstHalfMethodMetrics(method,version,start);
-			calculatingMethodMetrics[start][0] = false;
+				calculatingChgSetSizePhaseOne=true;
+				getChgSetMetrics(s,version);
+				calculatingChgSetSizePhaseOne=false;
 
-			if (threadsLineOfMethod[start].getMethodHistories()!=0) {
-				calculatingMethodMetrics[start][1]=true;
-				getElseMetrics(method,version,start);
-				calculatingMethodMetrics[start][1]=false;
-
-				calculatingMethodMetrics[start][2]=true;
-				getCondMetric(method,version,start);
-				calculatingMethodMetrics[start][2]=false;
-
+				counterMethods++;
+				if(Math.floorMod(counterMethods, 10)==0) {
+					System.out.println("Calcolato fino alla "+counterMethods+"° classe");
+				}
 			}
-
-			calculatingMethodMetrics[start][3]=true;
-			getNumberOfAuthorsOfMetod( method,version,start);
-			calculatingMethodMetrics[start][3]=false;
-
-			calculatingMethodMetrics[start][4]=true;
-			getLOC_Of_Method( method,version,start);
-			calculatingMethodMetrics[start][4]=false;
-
-			//commenta queste due righe per non avere printf
-			counterMethods++;
-			System.out.println("metodo: "+counterMethods+"°, versione "+version);
+			System.out.println("########## Evaluated metrics for version "+version+"############");
+			counterMethods=0;
 
 		}
 
-	}
-
-	private static void calculateCommitMetrics(int version) {
-
-		int counter =0;
-		//per ogni commit nella release (version)
-		for (String commit : commitOfCurrentRelease) {
-
-			counter++;
-			if(Math.floorMod(counter, 10)==0) {
-				System.out.println("Commit "+counter+" "+commit+" release "+version);
-			}
-			////////////////
-			System.out.println("Working on commit:"+commit);
-
-			calculatingFirstHalfCommitMetrics = true;
-			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
-			searchFirstHalfCommitMetrics(version,commit);
-			calculatingFirstHalfCommitMetrics = false;
-
-			calculatingNumDevAndNucMetricCommitLevel=true;
-			getNumberOfDevAndNucOfCommitLevel(commit,version);
-			calculatingNumDevAndNucMetricCommitLevel=false;
-
-			calculatingAuthorOfCommit=true;
-			getAuthorOfCommit(commit);
-			calculatingAuthorOfCommit=false;
-
-			
-			calculatingSexp=true;
-			getSexpCommitLevel(commit);
-			calculatingSexp=false;
-
-			calculatingExp=true;
-			getExpCommitLevel(commit);
-			calculatingExp=false;
-
-			System.out.println("Founded "+modifiedFilesOfCommit.size()+" file changed");
-			//ora per le metriche AGE e REXP  -----------------
-			//per ogni file occorre calcolare la data dell'ultimo commit avvenuto
-			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
-				calculatingFileAgeCommitLevel=true;
-				getAgeCommitLevelOfFile(commit,modifiedFilesOfCommit.get(i));
-				calculatingFileAgeCommitLevel=false;
-
-				calculatingLOCBeforeCommit=true;
-				getLinesOfCodeOfFileBeforeCommit(commit,modifiedFilesOfCommit.get(i));
-				calculatingLOCBeforeCommit=false;
-			}
-
-			//questo metodo utilizzerà dati condivisi per settare l'age di lineOfCommit 
-			calculateAgeCommitLevel();
-
-			calculatingRecExp=true;
-			getRecExpCommitLevel(commit);
-			calculatingRecExp=false;
-
-			arrayOfEntryOfCommitDataset.add(lineOfCommit);
-
-			//--------------------------------
-			listOfDaysPassedBetweenCommits.clear();
-			modifiedFilesOfCommit.clear();
-			modifiedSubOfCommit.clear();
-		}
-	}
-
-	//Search and list of all methods of java files in the repository at the given release
-	public static void searchMethods( final File folder, List<String> result, int version) {
-		String fileRenamed;
-		for (final File f : folder.listFiles()) {
-
-			if (f.isDirectory()) {
-				searchMethods(f, result,version);
-			}
-
-			//si prendono solo i file java
-			if (f.isFile()&&f.getName().matches(".*\\.mjava")) {
 
 
-				//doingCheckout of the local prefix to the file name (that depends to this program)
+		private static void calculateMethodsMetrics(int version, int stride, int start) {
 
-				fileRenamed=f.getAbsolutePath();
-				//System.out.println(fileRenamed);
-				//System.out.println((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString());
+			//per ogni metodo nella release (version)
+			for (int j = start; j < fileMethodsOfTheCurrentRelease.size(); j=j+stride) {
+				//for (int j = start; j < 100; j=j+stride) {
+				String method = fileMethodsOfTheCurrentRelease.get(j);
 
-				fileRenamed=fileRenamed.replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName+FINER_GIT+version)+SLASH).toString(), "");
+				calculatingMethodMetrics[start][0]=true;
+				getFirstHalfMethodMetrics(method,version,start);
+				calculatingMethodMetrics[start][0] = false;
 
-				//ci si costruisce una lista 
+				if (threadsLineOfMethod[start].getMethodHistories()!=0) {
+					calculatingMethodMetrics[start][1]=true;
+					getElseMetrics(method,version,start);
+					calculatingMethodMetrics[start][1]=false;
 
-				//il comando git log prende percorsi con la '/'
-				fileRenamed= fileRenamed.replace("\\", "/");
-				result.add(fileRenamed);
-				//System.out.println(fileRenamed);
-
-			}
-		}
-	}
-
-
-	//private static void writeMethodMetricsResult(int rel) {
-	private static void writeMethodMetricsResult() {
-		//String outname = projectName + "_Method_Until_"+rel+".csv";
-		String outname = projectName + "_Method.csv";
-		//Name of CSV for output
-//-------------------------------------------------------------------------
-		try (FileWriter fileWriter = new FileWriter(outname)){
-
-
-
-			fileWriter.append("Project;Release;Method;methodHistories;LOC;authors;"
-					+ "stmtAdded;maxStmtAdded;avgStmtAdded;stmtDeleted;maxStmtDeleted;"
-					+ "avgStmtDeleted;Churn;MaxChurn;AvgChurn;cond;elseAdded;elseDeleted;Actual_Defective");
-			fileWriter.append("\n");
-			for ( LineOfMethodDataset line : arrayOfEntryOfMethodDataset) {
-
-				fileWriter.append(projectName);
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getVersion()));
-				fileWriter.append(";");
-
-				int ind=line.getMethod().indexOf("."); 
-				if (ind!=-1){
-					String myMethodName = line.getMethod().substring(0,ind);//discard of ".mjava" from method name
-					myMethodName = myMethodName.replace("#",".java#");//adding ".java" on class name
-
-					fileWriter.append(myMethodName);
+					calculatingMethodMetrics[start][2]=true;
+					getCondMetric(method,version,start);
+					calculatingMethodMetrics[start][2]=false;
 
 				}
-				else 
-					fileWriter.append(line.getMethod());
 
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getMethodHistories()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getLOC()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getAuthors()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getStmtAdded()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getMaxStmtAdded()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getAvgStmtAdded()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getStmtDeleted()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getMaxStmtDeleted()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getAvgStmtDeleted()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getChurn()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getMaxChurn()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getAvgChurn()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getCond()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getElseAdded()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getElseDeleted()));
-				fileWriter.append(";");
-				fileWriter.append(line.getDefective());
+				calculatingMethodMetrics[start][3]=true;
+				getNumberOfAuthorsOfMetod( method,version,start);
+				calculatingMethodMetrics[start][3]=false;
+
+				calculatingMethodMetrics[start][4]=true;
+				getLOC_Of_Method( method,version,start);
+				calculatingMethodMetrics[start][4]=false;
+
+				//commenta queste due righe per non avere printf
+				counterMethods++;
+				System.out.println("metodo: "+counterMethods+"°, versione "+version);
+
+			}
+
+		}
+
+		private static void calculateCommitMetrics(int version) {
+
+			int counter =0;
+			//per ogni commit nella release (version)
+			for (String commit : commitOfCurrentRelease) {
+
+				counter++;
+				if(Math.floorMod(counter, 10)==0) {
+					System.out.println("Commit "+counter+" "+commit+" release "+version);
+				}
+				////////////////
+				System.out.println("Working on commit:"+commit);
+
+				calculatingFirstHalfCommitMetrics = true;
+				//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
+				searchFirstHalfCommitMetrics(version,commit);
+				calculatingFirstHalfCommitMetrics = false;
+
+				calculatingNumDevAndNucMetricCommitLevel=true;
+				getNumberOfDevAndNucOfCommitLevel(commit,version);
+				calculatingNumDevAndNucMetricCommitLevel=false;
+
+				calculatingAuthorOfCommit=true;
+				getAuthorOfCommit(commit);
+				calculatingAuthorOfCommit=false;
+
+
+				calculatingSexp=true;
+				getSexpCommitLevel(commit);
+				calculatingSexp=false;
+
+				calculatingExp=true;
+				getExpCommitLevel(commit);
+				calculatingExp=false;
+
+				System.out.println("Founded "+modifiedFilesOfCommit.size()+" file changed");
+				//ora per le metriche AGE e REXP  -----------------
+				//per ogni file occorre calcolare la data dell'ultimo commit avvenuto
+				for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
+					calculatingFileAgeCommitLevel=true;
+					getAgeCommitLevelOfFile(commit,modifiedFilesOfCommit.get(i));
+					calculatingFileAgeCommitLevel=false;
+
+					calculatingLOCBeforeCommit=true;
+					getLinesOfCodeOfFileBeforeCommit(commit,modifiedFilesOfCommit.get(i));
+					calculatingLOCBeforeCommit=false;
+				}
+
+				//questo metodo utilizzerà dati condivisi per settare l'age di lineOfCommit 
+				calculateAgeCommitLevel();
+
+				calculatingRecExp=true;
+				getRecExpCommitLevel(commit);
+				calculatingRecExp=false;
+
+				arrayOfEntryOfCommitDataset.add(lineOfCommit);
+
+				//--------------------------------
+				listOfDaysPassedBetweenCommits.clear();
+				modifiedFilesOfCommit.clear();
+				modifiedSubOfCommit.clear();
+			}
+		}
+
+		//Search and list of all methods of java files in the repository at the given release
+		public static void searchMethods( final File folder, List<String> result, int version) {
+			String fileRenamed;
+			for (final File f : folder.listFiles()) {
+
+				if (f.isDirectory()) {
+					searchMethods(f, result,version);
+				}
+
+				//si prendono solo i file java
+				if (f.isFile()&&f.getName().matches(".*\\.mjava")) {
+
+
+					//doingCheckout of the local prefix to the file name (that depends to this program)
+
+					fileRenamed=f.getAbsolutePath();
+					//System.out.println(fileRenamed);
+					//System.out.println((Paths.get(new File("").getAbsolutePath()+SLASH+projectName)+SLASH).toString());
+
+					fileRenamed=fileRenamed.replace((Paths.get(new File("").getAbsolutePath()+SLASH+projectName+FINER_GIT+version)+SLASH).toString(), "");
+
+					//ci si costruisce una lista 
+
+					//il comando git log prende percorsi con la '/'
+					fileRenamed= fileRenamed.replace("\\", "/");
+					result.add(fileRenamed);
+					//System.out.println(fileRenamed);
+
+				}
+			}
+		}
+
+
+		//private static void writeMethodMetricsResult(int rel) {
+		private static void writeMethodMetricsResult() {
+			//String outname = projectName + "_Method_Until_"+rel+".csv";
+			String outname = projectName + "_Method.csv";
+			//Name of CSV for output
+			//-------------------------------------------------------------------------
+			try (FileWriter fileWriter = new FileWriter(outname)){
+
+
+
+				fileWriter.append("Project;Release;Method;methodHistories;LOC;authors;"
+						+ "stmtAdded;maxStmtAdded;avgStmtAdded;stmtDeleted;maxStmtDeleted;"
+						+ "avgStmtDeleted;Churn;MaxChurn;AvgChurn;cond;elseAdded;elseDeleted;Actual_Defective");
 				fileWriter.append("\n");
+				for ( LineOfMethodDataset line : arrayOfEntryOfMethodDataset) {
+
+					fileWriter.append(projectName);
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getVersion()));
+					fileWriter.append(";");
+
+					int ind=line.getMethod().indexOf("."); 
+					if (ind!=-1){
+						String myMethodName = line.getMethod().substring(0,ind);//discard of ".mjava" from method name
+						myMethodName = myMethodName.replace("#",".java#");//adding ".java" on class name
+
+						fileWriter.append(myMethodName);
+
+					}
+					else 
+						fileWriter.append(line.getMethod());
+
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getMethodHistories()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getLOC()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getAuthors()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getStmtAdded()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getMaxStmtAdded()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getAvgStmtAdded()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getStmtDeleted()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getMaxStmtDeleted()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getAvgStmtDeleted()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getChurn()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getMaxChurn()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getAvgChurn()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getCond()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getElseAdded()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getElseDeleted()));
+					fileWriter.append(";");
+					fileWriter.append(line.getDefective());
+					fileWriter.append("\n");
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
+
 		}
 
+		//questo metodo lancia un comando che ritornerà tutti i commit hash dei copmmit avvenuti nella release passata
+		public static void SearchForCommitsOfGivenRelease(int release) {
 
-	}
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			String command;
 
-	//questo metodo lancia un comando che ritornerà tutti i commit hash dei copmmit avvenuti nella release passata
-	public static void SearchForCommitsOfGivenRelease(int release) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-		String command;
-
-		try {
-			if(release>1) {
-				command = ECHO+release+" && git log --pretty=format:\"%H\""
-						+ " --since="+fromReleaseIndexToDate.get(String.valueOf(release-1))+
-						" --until="+fromReleaseIndexToDate.get(String.valueOf(release))+" -- *.java" ;	
-			}
-			else {  //prima release
-				command = ECHO+release+" && git log --pretty=format:\"%H\" "
-						+ "--until="+fromReleaseIndexToDate.get(String.valueOf(release))+" -- *.java";	
-			}
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-
-	private static void searchFirstHalfCommitMetrics(Integer version, String commit) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {    
-			//ritorna release e commit id, poi righe aggiunte, eliminate e nome del file java modificato
-			command = ECHO+version+" "+commit+" && git show  --format= --numstat "
-					+commit+" --no-renames -- *.java";	
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-
-	}
-
-	//per ottenere il numero di commit per ogni autore che ha modificato i "modifiedFiles" fino al commit passato 
-	private static void getNumberOfDevAndNucOfCommitLevel(String commit, Integer version) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {
-			command = "git shortlog -sn "+commit+" -- ";
-			//aggiungo i nome dei file toccati dal commit in esame
-			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
-				command.concat(modifiedFilesOfCommit.get(i));				
-			}
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	private static void getAuthorOfCommit(String commit) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {    
-			//ritorna l'autore del commit 
-			command = "git show -s --format=\"%an\" "+commit;	
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-
-	//per ottenere il numero di commit dell'author riguardanti i "subsystem" fino al commit passato 
-	private static void getSexpCommitLevel(String commit) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {
-			command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\" -- ";
-			//aggiungo i nomi dei file toccati dal commit in esame
-			for (int i = 0; i < modifiedSubOfCommit.size(); i++) {
-				command.concat(modifiedSubOfCommit.get(i));				
-			}
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	//per ottenere il numero di commit dell'author nel progetto fino al commit passato 
-	private static void getExpCommitLevel(String commit) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {
-			command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\"";
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	//occorre calcolare la data dell'ultimo commit avvenuto sul file 
-	private static void getAgeCommitLevelOfFile(String commit,String file) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		//si printa la data del commit passato e anche del commit precedente
-		try {
-			command = "git log --date=short -2 "+commit+" --format=%ad -- "+file+"";
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	//qui si fa la media dei giorni passati dall'ultimo commit tra tutti i file e si setta il valore della metrica
-	private static void calculateAgeCommitLevel(){
-		int age=0;
-		for (int i = 0; i < listOfDaysPassedBetweenCommits.size(); i++) {
-			if (listOfDaysPassedBetweenCommits.get(i)<0) {
-				listOfDaysPassedBetweenCommits.remove(i);
-				continue;
-			}
-			age+=listOfDaysPassedBetweenCommits.get(i);	
-		}
-		if(listOfDaysPassedBetweenCommits.size()!=0)
-			age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
-		lineOfCommit.setAge(age);
-	}
-
-	//per ottenere le date dei commit dell'author nel progetto fino al commit passato 
-	private static void getRecExpCommitLevel(String commit) {
-
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+
-				SLASH+projectName);
-		String command;
-
-		try {
-			command = "git log --date=short "+commit+" --author=\""+authorOfCommit+"\" --format=%ad";
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-	}
-
-	//per ottenere le linee di codice fino a quel commit (incluso) del file passato
-	private static void getLinesOfCodeOfFileBeforeCommit(String commit, String filename) {
-		//directory da cui far partire il comando git    
-		Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
-		String command;
-
-		// git log [commit] --format= --numstat -- [filename]
-
-		try {
-
-			command ="git log "+commit+FORMATNUMSTAT+filename;	
-
-			runCommandOnShell(directory, command);
-
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			Thread.currentThread().interrupt();
-		}
-
-	}
-
-	//qui si cercano tutti i fix commit di ogni bug ticket di Jira
-	private static void getBugFixCommitsFromGitAndSetFixMetric() throws IOException {
-		calculatingTypeOfCommit=true;
-		for (TicketTakenFromJIRA myTicket : tickets) {
 			try {
-				ticket=myTicket;
-				getAllCommitOfBugFix(myTicket.getKey());
+				if(release>1) {
+					command = ECHO+release+" && git log --pretty=format:\"%H\""
+							+ " --since="+fromReleaseIndexToDate.get(String.valueOf(release-1))+
+							" --until="+fromReleaseIndexToDate.get(String.valueOf(release))+" -- *.java" ;	
+				}
+				else {  //prima release
+					command = ECHO+release+" && git log --pretty=format:\"%H\" "
+							+ "--until="+fromReleaseIndexToDate.get(String.valueOf(release))+" -- *.java";	
+				}
+				runCommandOnShell(directory, command);
 
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+
+		private static void searchFirstHalfCommitMetrics(Integer version, String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {    
+				//ritorna release e commit id, poi righe aggiunte, eliminate e nome del file java modificato
+				command = ECHO+version+" "+commit+" && git show  --format= --numstat "
+						+commit+" --no-renames -- *.java";	
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				Thread.currentThread().interrupt();
 			}
 
 		}
-		calculatingTypeOfCommit=false;
 
-		//ora si settano i fix commit trovati nel dataset
-		//per ogni ticket
-		for (TicketTakenFromJIRA myTicket : tickets) {
-			//per ogni fix commit del ticket
-			for (int i = 0; i < myTicket.getFixCommitList().size(); i++) {
-				//si cerca la linea del dataset di commit corrispondente
-				for (LineOfCommitDataset commitLine : arrayOfEntryOfCommitDataset) {
-					if(commitLine.getCommit().equals(myTicket.getFixCommitList().get(i))) {
-						commitLine.setDefectFix("YES");
-						break;
+		//per ottenere il numero di commit per ogni autore che ha modificato i "modifiedFiles" fino al commit passato 
+		private static void getNumberOfDevAndNucOfCommitLevel(String commit, Integer version) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {
+				command = "git shortlog -sn "+commit+" -- ";
+				//aggiungo i nome dei file toccati dal commit in esame
+				for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
+					command.concat(modifiedFilesOfCommit.get(i));				
+				}
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		private static void getAuthorOfCommit(String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {    
+				//ritorna l'autore del commit 
+				command = "git show -s --format=\"%an\" "+commit;	
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+
+		//per ottenere il numero di commit dell'author riguardanti i "subsystem" fino al commit passato 
+		private static void getSexpCommitLevel(String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {
+				command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\" -- ";
+				//aggiungo i nomi dei file toccati dal commit in esame
+				for (int i = 0; i < modifiedSubOfCommit.size(); i++) {
+					command.concat(modifiedSubOfCommit.get(i));				
+				}
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		//per ottenere il numero di commit dell'author nel progetto fino al commit passato 
+		private static void getExpCommitLevel(String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {
+				command = "git shortlog -sn "+commit+" --author=\""+authorOfCommit+"\"";
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		//occorre calcolare la data dell'ultimo commit avvenuto sul file 
+		private static void getAgeCommitLevelOfFile(String commit,String file) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			//si printa la data del commit passato e anche del commit precedente
+			try {
+				command = "git log --date=short -2 "+commit+" --format=%ad -- "+file+"";
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		//qui si fa la media dei giorni passati dall'ultimo commit tra tutti i file e si setta il valore della metrica
+		private static void calculateAgeCommitLevel(){
+			int age=0;
+			for (int i = 0; i < listOfDaysPassedBetweenCommits.size(); i++) {
+				if (listOfDaysPassedBetweenCommits.get(i)<0) {
+					listOfDaysPassedBetweenCommits.remove(i);
+					continue;
+				}
+				age+=listOfDaysPassedBetweenCommits.get(i);	
+			}
+			if(listOfDaysPassedBetweenCommits.size()!=0)
+				age=Math.floorDiv(age, listOfDaysPassedBetweenCommits.size());
+			lineOfCommit.setAge(age);
+		}
+
+		//per ottenere le date dei commit dell'author nel progetto fino al commit passato 
+		private static void getRecExpCommitLevel(String commit) {
+
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+
+					SLASH+projectName);
+			String command;
+
+			try {
+				command = "git log --date=short "+commit+" --author=\""+authorOfCommit+"\" --format=%ad";
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+		}
+
+		//per ottenere le linee di codice fino a quel commit (incluso) del file passato
+		private static void getLinesOfCodeOfFileBeforeCommit(String commit, String filename) {
+			//directory da cui far partire il comando git    
+			Path directory = Paths.get(new File("").getAbsolutePath()+SLASH+projectName);
+			String command;
+
+			// git log [commit] --format= --numstat -- [filename]
+
+			try {
+
+				command ="git log "+commit+FORMATNUMSTAT+filename;	
+
+				runCommandOnShell(directory, command);
+
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+				Thread.currentThread().interrupt();
+			}
+
+		}
+
+		//qui si cercano tutti i fix commit di ogni bug ticket di Jira
+		private static void getBugFixCommitsFromGitAndSetFixMetric() throws IOException {
+			calculatingTypeOfCommit=true;
+			for (TicketTakenFromJIRA myTicket : tickets) {
+				try {
+					ticket=myTicket;
+					getAllCommitOfBugFix(myTicket.getKey());
+
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					Thread.currentThread().interrupt();
+				}
+
+			}
+			calculatingTypeOfCommit=false;
+
+			//ora si settano i fix commit trovati nel dataset
+			//per ogni ticket
+			for (TicketTakenFromJIRA myTicket : tickets) {
+				//per ogni fix commit del ticket
+				for (int i = 0; i < myTicket.getFixCommitList().size(); i++) {
+					//si cerca la linea del dataset di commit corrispondente
+					for (LineOfCommitDataset commitLine : arrayOfEntryOfCommitDataset) {
+						if(commitLine.getCommit().equals(myTicket.getFixCommitList().get(i))) {
+							commitLine.setDefectFix("YES");
+							break;
+						}
+
 					}
-
 				}
 			}
+
+
 		}
 
+		private static void writeCommitMetricsResult() {
+			String outname = projectName + "_Commit.csv";
+			//Name of CSV for output
 
-	}
-
-	private static void writeCommitMetricsResult() {
-		String outname = projectName + "_Commit.csv";
-		//Name of CSV for output
-
-		try (FileWriter fileWriter = new FileWriter(outname)){
+			try (FileWriter fileWriter = new FileWriter(outname)){
 
 
 
-			fileWriter.append("Project;Release;Commit;NS;ND;"
-					+ "NF;Entropy;Size;LA;LD;LT;"
-					+ "FIX;NDEV;AGE;NUC;EXP;REXP;SEXP;Actual_Defective");
-			fileWriter.append("\n");
-			for ( LineOfCommitDataset line : arrayOfEntryOfCommitDataset) {
-
-				fileWriter.append(projectName);
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getVersion()));
-				fileWriter.append(";");
-				fileWriter.append(line.getCommit());
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getNumModSub()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getNumModDir()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getNumModFiles()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getEntropy()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getSize()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getLineAdded()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getLineDeleted()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getLineBeforeChange()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getDefectFix()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getNumDev()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getAge()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getNuc()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getExp()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getRecentExp()));
-				fileWriter.append(";");
-				fileWriter.append(String.valueOf(line.getSubExp()));
-				fileWriter.append(";");
-				fileWriter.append(line.getBugIntroducing());
+				fileWriter.append("Project;Release;Commit;NS;ND;"
+						+ "NF;Entropy;Size;LA;LD;LT;"
+						+ "FIX;NDEV;AGE;NUC;EXP;REXP;SEXP;Actual_Defective");
 				fileWriter.append("\n");
+				for ( LineOfCommitDataset line : arrayOfEntryOfCommitDataset) {
+
+					fileWriter.append(projectName);
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getVersion()));
+					fileWriter.append(";");
+					fileWriter.append(line.getCommit());
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getNumModSub()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getNumModDir()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getNumModFiles()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getEntropy()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getSize()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getLineAdded()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getLineDeleted()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getLineBeforeChange()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getDefectFix()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getNumDev()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getAge()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getNuc()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getExp()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getRecentExp()));
+					fileWriter.append(";");
+					fileWriter.append(String.valueOf(line.getSubExp()));
+					fileWriter.append(";");
+					fileWriter.append(line.getBugIntroducing());
+					fileWriter.append("\n");
+				}
+
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 
-		} catch (Exception e) {
-			e.printStackTrace();
+
+		}
+
+		private static void listFiles(final File folder) {
+			for (final File fileEntry : folder.listFiles()) {
+
+				//System.out.println(fileEntry.getName()); //OPENJPA_Commit.csv
+				//System.out.println(fileEntry.getAbsolutePath()); //E:\Programmi\Eclipse\collectDataForRQ1\Results\OPENJPA_Commit.csv
+				filesPath.add(fileEntry.getAbsolutePath());
+			}
 		}
 
 
 	}
-
-
-}
