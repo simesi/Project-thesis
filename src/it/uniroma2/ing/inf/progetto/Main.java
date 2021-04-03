@@ -2458,15 +2458,18 @@ public class Main {
 			for (String file : filesPath) {
 				findNumberOfReleasesOfFile(file);
 				createTrainAndTestFile(file);
-
+				
+				Weka w = new Weka();
+				int beginIndex= file.indexOf("_");
+				
+				w.doPrediction(file.substring(((beginIndex)+1),file.length()-4),file.substring(0, beginIndex));
+		
 
 
 
 				/*		Weka w = new Weka();
 
-		i=Math.floorDiv(releases.size(),2);
-		//i=Math.floorDiv(14,2);//commenta questa linea di codice e lascia quella sopra!
-
+		
 		//a doClassification() gli si passa il max numero di versioni da classificare
 		w.doClassificationMilestone2(i, projectName);
 
@@ -3079,7 +3082,6 @@ public class Main {
 		try {
 			if(studyClassMetrics&&file.contains("Class")) {
 
-				System.out.println("class for file "+file);
 				csvTrain = file.substring(0, file.indexOf("_"))+"_Class_Train.csv";
 				csvTest = file.substring(0, file.indexOf("_"))+"_Class_Test.csv";	
 

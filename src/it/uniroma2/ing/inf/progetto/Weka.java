@@ -48,138 +48,138 @@ public class Weka {
 
 
 	//questo metodo compara i risultati dei tre classificatori utilizzando la tecnica WalkForward
-	public void doClassificationMilestone2(int maxVersion, String dataSet) {
-
-		String name = dataSet+" Deliverable 2 Milestone 2.csv";
-		//ora si classifica ------------------------- 
+	public void doPrediction(String type,String projectName) {
+		//System.out.println(type+" "+projectName); // Class DIRSERVER
+		
+		String name = projectName+" Result RQ2.csv"; 
+		// ------------------------- 
 
 		try (   	//True = Append to file, false = Overwrite
 				FileWriter fileWriter = new FileWriter(name,true);
 				)
 		{
-			fileWriter.append("Dataset,#Training Release, Classifier, Precision, Recall, AUC, KAPPA");
+			fileWriter.append("ID,type,size,ML_Model,Predicted,Bugginess");
 			fileWriter.append("\n");
-			
-		for(int version=2;version<=maxVersion;version++) {
+
 
 			String arffNameFileTrain = "";
 			String arffNameFileTest = "";
 
 			//prima ci si crea un file arff da quello csv
-			
-				// load CSV
-				CSVLoader loader = new CSVLoader();
-				loader.setSource(new File(dataSet+TRAINING_FOR_RELEASE+version+".csv"));
-				Instances data = loader.getDataSet();
 
-				// save ARFF
-				ArffSaver saver = new ArffSaver();
-				saver.setInstances(data);
+			// load CSV
+			CSVLoader loader = new CSVLoader();
+			loader.setSource(new File(projectName+TRAINING_FOR_RELEASE+".csv"));
+			Instances data = loader.getDataSet();
 
-
-				arffNameFileTrain = dataSet+TRAINING_FOR_RELEASE+version+ARFF;
+			// save ARFF
+			ArffSaver saver = new ArffSaver();
+			saver.setInstances(data);
 
 
-				saver.setFile(new File(arffNameFileTrain));
-				saver.writeBatch();
+			arffNameFileTrain = projectName+TRAINING_FOR_RELEASE+ARFF;
+
+
+			saver.setFile(new File(arffNameFileTrain));
+			saver.writeBatch();
 
 
 
 
 			//adesso ci si crea l'arff per il my_test
-			
-				// load CSV
-				 loader = new CSVLoader();
-				loader.setSource(new File(dataSet+TESTING_FOR_RELEASE+version+".csv"));
-				data = loader.getDataSet();
 
-				// save ARFF
-				saver = new ArffSaver();
-				saver.setInstances(data);
+			// load CSV
+			loader = new CSVLoader();
+			loader.setSource(new File(projectName+TESTING_FOR_RELEASE+".csv"));
+			data = loader.getDataSet();
 
-
-				arffNameFileTest = dataSet +TESTING_FOR_RELEASE+version+ARFF;
+			// save ARFF
+			saver = new ArffSaver();
+			saver.setInstances(data);
 
 
-				saver.setFile(new File(arffNameFileTest));
-				saver.writeBatch();
+			arffNameFileTest = projectName +TESTING_FOR_RELEASE+ARFF;
+
+
+			saver.setFile(new File(arffNameFileTest));
+			saver.writeBatch();
 
 
 
-				//load datasets
-				DataSource source1 = new DataSource(arffNameFileTrain);
-				Instances training = source1.getDataSet();
+			//load datasets
+			DataSource source1 = new DataSource(arffNameFileTrain);
+			Instances training = source1.getDataSet();
 
-				DataSource source2 = new DataSource(arffNameFileTest);
-				Instances myTest = source2.getDataSet();
+			DataSource source2 = new DataSource(arffNameFileTest);
+			Instances myTest = source2.getDataSet();
 
-				int numAttr = training.numAttributes();
-				training.setClassIndex(numAttr - 1); //leviamo 1 perchè l'ultima colonna la vogliamo stimare 
-				myTest.setClassIndex(numAttr - 1);
+			int numAttr = training.numAttributes();
+			training.setClassIndex(numAttr - 1); //leviamo 1 perchè l'ultima colonna la vogliamo stimare 
+			myTest.setClassIndex(numAttr - 1);
 
-				//per ogni classificatore
-				for(int n=1;n<=3;n++) {
-					if(n==1) {
+			//per ogni classificatore
+			for(int n=1;n<=3;n++) {
+				if(n==1) {
 
-						//NaiveBayes---------------
-						NaiveBayes classifier = new NaiveBayes(); //scelgo come classificatore il naive bayes
-						myClassificator ="NaiveBayes";
-						classifier.buildClassifier(training); //qui si fa il training
+					//NaiveBayes---------------
+					NaiveBayes classifier = new NaiveBayes(); //scelgo come classificatore il naive bayes
+					myClassificator ="NaiveBayes";
+					classifier.buildClassifier(training); //qui si fa il training
 
-						eval = new Evaluation(myTest);	
+					eval = new Evaluation(myTest);	
 
-						eval.evaluateModel(classifier, myTest); 
-					}
-
-					else if (n==2) {
-						//RandomForest---------------
-						RandomForest classifier = new RandomForest(); //scelgo come classificatore RandomForest
-						myClassificator ="RandomForest";
-						classifier.buildClassifier(training); //qui si fa il training
-
-						eval = new Evaluation(myTest);	
-
-						eval.evaluateModel(classifier, myTest); 
-					}
-					else if (n==3) {
-						//Ibk---------------
-						IBk classifier = new IBk(); //scelgo come classificatore Ibk
-						myClassificator ="IBk";
-						classifier.buildClassifier(training); //qui si fa il training
-
-						eval = new Evaluation(myTest);	
-
-						eval.evaluateModel(classifier, myTest); 
-					}
-
-					//ora si scrive file csv coi risultati
-
-
-					fileWriter.append(dataSet);
-					fileWriter.append(",");
-					fileWriter.append(String.valueOf(version-1));
-					fileWriter.append(",");
-					fileWriter.append(myClassificator);
-					fileWriter.append(",");
-					fileWriter.append(String.valueOf(numberFormat.format(eval.precision(1))).replace(',', '.'));
-					fileWriter.append(",");
-					fileWriter.append(String.valueOf(numberFormat.format(eval.recall(1))).replace(',', '.'));
-					fileWriter.append(",");
-					fileWriter.append(String.valueOf(numberFormat.format(eval.areaUnderROC(1))).replace(',', '.'));
-					fileWriter.append(",");
-					fileWriter.append(String.valueOf(numberFormat.format(eval.kappa())).replace(',', '.'));
-					fileWriter.append("\n");
-
+					eval.evaluateModel(classifier, myTest); 
 				}
 
-			}
-		}
-			catch (Exception e) {
-				e.printStackTrace();
-				System.exit(-1);
-			} 
+				else if (n==2) {
+					//RandomForest---------------
+					RandomForest classifier = new RandomForest(); //scelgo come classificatore RandomForest
+					myClassificator ="RandomForest";
+					classifier.buildClassifier(training); //qui si fa il training
 
-		
+					eval = new Evaluation(myTest);	
+
+					eval.evaluateModel(classifier, myTest); 
+				}
+				else if (n==3) {
+					//Ibk---------------
+					IBk classifier = new IBk(); //scelgo come classificatore Ibk
+					myClassificator ="IBk";
+					classifier.buildClassifier(training); //qui si fa il training
+
+					eval = new Evaluation(myTest);	
+
+					eval.evaluateModel(classifier, myTest); 
+				}
+
+				//ora si scrive file csv coi risultati
+
+
+				fileWriter.append(projectName);
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(1)); //version
+				fileWriter.append(",");
+				fileWriter.append(myClassificator);
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(numberFormat.format(eval.precision(1))).replace(',', '.'));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(numberFormat.format(eval.recall(1))).replace(',', '.'));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(numberFormat.format(eval.areaUnderROC(1))).replace(',', '.'));
+				fileWriter.append(",");
+				fileWriter.append(String.valueOf(numberFormat.format(eval.kappa())).replace(',', '.'));
+				fileWriter.append("\n");
+
+			}
+
+
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.exit(-1);
+		} 
+
+
 
 	}
 
@@ -249,7 +249,7 @@ public class Weka {
 	private void classifyAndWrite(int n,int balancing,int fs,int version) {
 
 
-			startClassificator(fs,balancing,n);
+		startClassificator(fs,balancing,n);
 
 		//--------------------------------------------------------------
 		//ora si scrive file csv coi risultati
@@ -261,15 +261,15 @@ public class Weka {
 		{
 			if(writeHeader==1) {
 				fileWriter.append("Dataset,#Training Release,%Training,%Defective in training,"
-								+ "%Defective in testing,classifier,balancing,Feature Selection,TP,FP,TN,FN,"
-					+ "Precision,Recall,ROC Area, Kappa");
+						+ "%Defective in testing,classifier,balancing,Feature Selection,TP,FP,TN,FN,"
+						+ "Precision,Recall,ROC Area, Kappa");
 
-			fileWriter.append("\n");
-			writeHeader--;
+				fileWriter.append("\n");
+				writeHeader--;
 
 			}
-			
-			
+
+
 			fileWriter.append(projectName);
 			fileWriter.append(",");
 			fileWriter.append(String.valueOf(version-1));
@@ -379,8 +379,8 @@ public class Weka {
 
 					FilteredClassifier fc = new FilteredClassifier();
 					resample = new Resample();
-					
-					 setUndersampling(fc,resample,classifier,fs);					               
+
+					setUndersampling(fc,resample,classifier,fs);					               
 				}
 
 				else if(balancing==4) {
@@ -428,7 +428,7 @@ public class Weka {
 
 					resample = new Resample();
 					FilteredClassifier fc = new FilteredClassifier();
-					 setUndersampling(fc,resample,classifier,fs);			               
+					setUndersampling(fc,resample,classifier,fs);			               
 				}
 
 				else if(balancing==4) {
@@ -455,23 +455,23 @@ public class Weka {
 
 
 	private void setUndersampling(FilteredClassifier fc, Resample resample,Classifier classifier,int fs) {
-		
+
 		try {
 			if(fs==0) {
-		resample.setInputFormat(noFilterTraining);
-		fc.setClassifier(classifier);
-		SpreadSubsample  spreadSubsample = new SpreadSubsample();
-		String[] opts = new String[]{ "-M", "1.0"};
-		spreadSubsample.setOptions(opts);
-		fc.setFilter(spreadSubsample);
-		fc.buildClassifier(noFilterTraining);
-		eval =new Evaluation(testing);	
-		eval.evaluateModel(fc, testing);
-		
+				resample.setInputFormat(noFilterTraining);
+				fc.setClassifier(classifier);
+				SpreadSubsample  spreadSubsample = new SpreadSubsample();
+				String[] opts = new String[]{ "-M", "1.0"};
+				spreadSubsample.setOptions(opts);
+				fc.setFilter(spreadSubsample);
+				fc.buildClassifier(noFilterTraining);
+				eval =new Evaluation(testing);	
+				eval.evaluateModel(fc, testing);
+
 			}
 			else {
 				resample.setInputFormat(noFilterTraining);
-				
+
 				fc.setClassifier(classifier);
 				SpreadSubsample  spreadSubsample = new SpreadSubsample();
 				String[] opts = new String[]{ "-M", "1.0"};
@@ -481,7 +481,7 @@ public class Weka {
 				eval =new Evaluation(testing);	
 				eval.evaluateModel(fc, testingFiltered);	
 			}
-		
+
 		}catch (Exception e) {
 			e.printStackTrace();
 		}
