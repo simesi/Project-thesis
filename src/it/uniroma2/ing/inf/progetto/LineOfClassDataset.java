@@ -1,4 +1,4 @@
-package it.uniroma2.ing.inf.progetto;
+package src.it.uniroma2.ing.inf.progetto;
 
 public class LineOfClassDataset {
 

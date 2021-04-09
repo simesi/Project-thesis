@@ -1,4 +1,4 @@
-package it.uniroma2.ing.inf.progetto;
+package src.it.uniroma2.ing.inf.progetto;
 import weka.core.Attribute;
 import weka.core.Instance;
 import weka.core.Instances;

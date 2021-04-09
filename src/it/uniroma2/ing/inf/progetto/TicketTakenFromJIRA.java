@@ -1,4 +1,4 @@
-package it.uniroma2.ing.inf.progetto;
+package src.it.uniroma2.ing.inf.progetto;
 
 import java.util.ArrayList;
 import java.util.List;

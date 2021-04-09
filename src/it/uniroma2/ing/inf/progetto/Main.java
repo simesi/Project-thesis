@@ -1,4 +1,4 @@
-package it.uniroma2.ing.inf.progetto;
+package src.it.uniroma2.ing.inf.progetto;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
