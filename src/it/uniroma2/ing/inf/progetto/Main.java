@@ -153,6 +153,8 @@ public class Main {
 	private static List<String> filesPath;
 	private static String csvTrain;
 	private static String csvTest;
+	private static ArrayList<String> idList;
+	private static ArrayList<String> sizeList;
 
 	//--------------------------
 
@@ -2455,37 +2457,31 @@ public class Main {
 			//populate filesPath array with the paths of the metric files obtained for RQ1
 			listFiles(folder);
 
+			idList= new ArrayList<>();
+			sizeList= new ArrayList<>();
+			
+			String folderRes = "Results RQ2";	        
+	        Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
+
+	        Files.createDirectories(path);
+			
+	        
+	        
 			for (String file : filesPath) {
 				findNumberOfReleasesOfFile(file);
 				createTrainAndTestFile(file);
-				
+
 				Weka w = new Weka();
 				int beginIndex= file.indexOf("_");
-				
-				w.doPrediction(file.substring(((beginIndex)+1),file.length()-4),file.substring(0, beginIndex));
-		
 
-
-
-				/*		Weka w = new Weka();
-
-		
-		//a doClassification() gli si passa il max numero di versioni da classificare
-		w.doClassificationMilestone2(i, projectName);
-
-
-		//--------------------------------------------------------------------------------
-		//inizio ultima milestone Deliverable 2 
-
-		try {
-			w.doClassificationMilestone3(i, projectName);
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-				 */
+				w.doPrediction(file.substring(((beginIndex)+1),file.length()-4),file.substring(0, beginIndex),idList,sizeList);
+				idList.clear();
+				sizeList.clear();
 			}
+
 		}
+		
+		
 	}
 
 	private static void calculateClassMetrics(int version) {
@@ -3108,6 +3104,9 @@ public class Main {
 					} 
 					else  {
 						writePieceOfCsv(fileWriterTest,entry,"class");
+
+						addListWithIdAndSize("class",entry);
+
 					}
 				}//fine while
 
@@ -3146,6 +3145,7 @@ public class Main {
 					} 
 					else  {
 						writePieceOfCsv(fileWriterTest,entry,"method");
+						addListWithIdAndSize("method",entry);
 					}
 				}//fine while
 
@@ -3182,6 +3182,7 @@ public class Main {
 					} 
 					else  {
 						writePieceOfCsv(fileWriterTest,entry,"commit");
+						addListWithIdAndSize("commit",entry);
 					}
 				}//fine while
 
@@ -3195,6 +3196,29 @@ public class Main {
 			e.printStackTrace();
 			System.exit(-1);	
 		}
+	}
+
+	//this method add every id and size of an entity in list (we'll need this to track data after the prediction ) 
+	private static void addListWithIdAndSize(String typeInp,String[] columnArray) {
+
+		idList.add(columnArray[2].concat("-"+columnArray[1]));
+
+		if (typeInp.contains("commit")) {
+
+			sizeList.add(columnArray[7]);
+
+		}
+		else if (typeInp.contains("method")) {
+
+			sizeList.add(columnArray[4]);
+
+		}
+		else { //class
+			sizeList.add(columnArray[3]);
+
+
+		}
+
 	}
 
 	private static void findNumberOfReleasesOfFile(String file) throws JSONException, IOException {
