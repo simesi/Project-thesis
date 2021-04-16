@@ -1,4 +1,4 @@
-package src.it.uniroma2.ing.inf.progetto;
+package it.uniroma2.ing.inf.progetto;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,6 +70,7 @@ public class Main {
 
 	private static final boolean doResearchQuest1 =false;
 	private static final boolean doResearchQuest2=true;
+	private static final boolean doResearchQuest3=false;
 
 	//cancella questa variabile
 	static int counterMethods=0;////
@@ -149,13 +150,17 @@ public class Main {
 
 	//-------------------------------
 	//RQ2
-	private static final String dir= "Results RQ1";
+	private static final String dirRQ1= "Results RQ1";
 	private static List<String> filesPath;
 	private static String csvTrain;
 	private static String csvTest;
 	private static ArrayList<String> idList;
 	private static ArrayList<String> sizeList;
 
+	//--------------------------
+	//RQ3
+	private static final String dirRQ2= "Results RQ2";
+	
 	//--------------------------
 
 
@@ -2452,21 +2457,21 @@ public class Main {
 		//----------------------------------------------------------------------------
 		if (doResearchQuest2) {
 
-			final File folder = new File(dir);
+			final File folder = new File(dirRQ1);
 			filesPath = new ArrayList<>();
 			//populate filesPath array with the paths of the metric files obtained for RQ1
 			listFiles(folder);
 
 			idList= new ArrayList<>();
 			sizeList= new ArrayList<>();
-			
-			String folderRes = "Results RQ2";	        
-	        Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
 
-	        Files.createDirectories(path);
-			
-	        
-	        
+			String folderRes = "Results RQ2";	        
+			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
+
+			Files.createDirectories(path);
+
+
+
 			for (String file : filesPath) {
 				findNumberOfReleasesOfFile(file);
 				createTrainAndTestFile(file);
@@ -2480,8 +2485,56 @@ public class Main {
 			}
 
 		}
-		
-		
+
+		if (doResearchQuest3) {
+
+			final File folder = new File(dirRQ2);
+			filesPath = new ArrayList<>();
+			//populate filesPath array with the paths of the files from RQ2
+			listFiles(folder);
+
+			idList= new ArrayList<>();
+			sizeList= new ArrayList<>();
+
+			String folderRes = "Results RQ3";	        
+			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
+
+			Files.createDirectories(path);
+
+
+
+			for (String file : filesPath) {
+				if (file.contains("Method")) {
+
+					//prendi classificatore
+					int beginIndex= file.lastIndexOf("_");
+					String classif = file.substring(beginIndex+1, file.length()-4);
+					String fileRenamed=file.replace("Method", "Commit");
+					
+					//cerca file commit di quel classificatore
+					for (String fileIterator : filesPath) {
+						
+						if (fileIterator.equals(fileRenamed)) {
+							System.out.println("1");
+						}
+					}
+					//leggi file_Metodo_classificatore
+					
+					//per ogni metodo nel file fai query git per ottenre touching commit
+					
+					//popola listra con touching commit
+					
+					//cerca nel file_commit_classificatore i commit nella lista e ottieni prob.
+					
+					idList.clear();
+					sizeList.clear();
+				}
+			}
+
+		}
+
+
+
 	}
 
 	private static void calculateClassMetrics(int version) {
@@ -3084,7 +3137,7 @@ public class Main {
 
 				FileWriter fileWriterTrain= new FileWriter(csvTrain);
 				FileWriter fileWriterTest=new FileWriter(csvTest);
-				BufferedReader csvReader = new BufferedReader(new FileReader(dir+'/'+file));
+				BufferedReader csvReader = new BufferedReader(new FileReader(dirRQ1+'/'+file));
 
 				headers= csvReader.readLine().split(";");
 
@@ -3099,6 +3152,7 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
+
 
 						writePieceOfCsv(fileWriterTrain,entry,"class");
 					} 
@@ -3125,7 +3179,7 @@ public class Main {
 
 				FileWriter fileWriterTrain= new FileWriter(csvTrain);
 				FileWriter fileWriterTest=new FileWriter(csvTest);
-				BufferedReader csvReader = new BufferedReader(new FileReader(dir+'/'+file));
+				BufferedReader csvReader = new BufferedReader(new FileReader(dirRQ1+'/'+file));
 
 				headers= csvReader.readLine().split(";");
 
@@ -3140,6 +3194,7 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
+
 
 						writePieceOfCsv(fileWriterTrain,entry,"method");
 					} 
@@ -3162,7 +3217,7 @@ public class Main {
 
 				FileWriter fileWriterTrain= new FileWriter(csvTrain);
 				FileWriter fileWriterTest=new FileWriter(csvTest);
-				BufferedReader csvReader = new BufferedReader(new FileReader(dir+'/'+file));
+				BufferedReader csvReader = new BufferedReader(new FileReader(dirRQ1+'/'+file));
 
 				headers= csvReader.readLine().split(";");
 

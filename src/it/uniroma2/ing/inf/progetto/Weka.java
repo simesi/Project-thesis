@@ -1,5 +1,4 @@
-package src.it.uniroma2.ing.inf.progetto;
-import weka.core.Attribute;
+package it.uniroma2.ing.inf.progetto;
 import weka.core.Instance;
 import weka.core.Instances;
 
@@ -16,26 +15,38 @@ import weka.attributeSelection.GreedyStepwise;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.meta.FilteredClassifier;
-import weka.classifiers.pmml.consumer.SupportVectorMachineModel;
+import weka.classifiers.meta.LogitBoost;
+import weka.classifiers.misc.HyperPipes;
+import weka.classifiers.lazy.IB1;
+import weka.classifiers.lazy.IBk;
+import weka.classifiers.lazy.KStar;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.AttributeSelection;
 import weka.filters.supervised.instance.Resample;
 import weka.filters.supervised.instance.SMOTE;
 import weka.filters.supervised.instance.SpreadSubsample;
-import weka.filters.unsupervised.attribute.Normalize;
 import weka.filters.unsupervised.attribute.NumericTransform;
 import weka.filters.unsupervised.attribute.ReplaceMissingWithUserConstant;
 import weka.filters.unsupervised.attribute.SwapValues;
 import weka.core.converters.ArffSaver;
 import weka.core.converters.CSVLoader;
 import weka.core.converters.ConverterUtils.DataSource;
-
+import weka.estimators.KernelEstimator;
+import weka.classifiers.functions.Logistic;
+import weka.classifiers.functions.MultilayerPerceptron;
 //import weka.classifiers.functions.LibSVM;
 import weka.classifiers.functions.SMO;
+import weka.classifiers.functions.VotedPerceptron;
+import weka.classifiers.trees.ADTree;
+import weka.classifiers.trees.DecisionStump;
 import weka.classifiers.trees.J48;
+import weka.classifiers.rules.PART;
+import weka.classifiers.rules.ZeroR;
 import weka.classifiers.trees.RandomForest;
 import weka.classifiers.bayes.BayesNet;
-import weka.filters.SimpleStreamFilter;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.bayes.NaiveBayesSimple;
+import weka.classifiers.rules.OneR;
 
 
 public class Weka {
@@ -233,210 +244,268 @@ public class Weka {
 
 			//-----------------			
 
-
+			Classifier classifier = null;
+			FileWriter fileWriter = null;
+			int numOfClassifiers = 19;
 			//per ogni classificatore
-			for(int n=1;n<5;n++) {
+			for(int n=1;n<numOfClassifiers+1;n++) {
 				if(n==1) {
 
 
 					//Bayes Network---------------
-					BayesNet classifier = new BayesNet();
-					myClassificator ="Bayes Network";
+					classifier = new BayesNet();
+					myClassificator ="BN";
 					classifier.buildClassifier(training); //qui si fa il training
 
 
 
 					//ora si scrive l'header del file csv coi risultati
-					FileWriter fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
-					fileWriter.append("ID;Type;Size;ML_Model;Predicted;Actual");
-					fileWriter.append("\n");
-
-
-					// Loop over each test instance.
-					for (int i = 0; i < numtesting; i++)
-					{
-						// Get the true class label from the instance's own classIndex.
-						String trueClassLabel = 
-								myTest.instance(i).toString(myTest.classIndex());
-
-						// Get the prediction probability distribution.
-						double[] predictionDistribution = 
-								classifier.distributionForInstance(myTest.instance(i)); 
-
-						// Get the probability.
-						double predictionProbability = 
-								predictionDistribution[1]; //1==prob YES
-
-						fileWriter.append(idList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(type);
-						fileWriter.append(";");
-						fileWriter.append(sizeList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(myClassificator);
-						fileWriter.append(";");
-						fileWriter.append(String.format("%6.3f",predictionProbability).replace(',', '.'));
-						fileWriter.append(";");
-						fileWriter.append(trueClassLabel);
-						fileWriter.append("\n");
-
-
-					}
-
-					fileWriter.close();
 
 				}
-
+				
 				else if (n==2) {
 					//RandomForest---------------
-					RandomForest classifier = new RandomForest(); //scelgo come classificatore RandomForest
-					myClassificator ="Random Forest";
+					 classifier = new RandomForest(); //scelgo come classificatore RandomForest
+					myClassificator ="RF";
 					classifier.buildClassifier(training); //qui si fa il training
 
 
 					//ora si scrive l'header del file csv coi risultati
-					FileWriter fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+					 fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
-					fileWriter.append("ID;Type;Size;ML_Model;Predicted;Actual");
-					fileWriter.append("\n");
-
-
-					// Loop over each test instance.
-					for (int i = 0; i < numtesting; i++)
-					{
-						// Get the true class label from the instance's own classIndex.
-						String trueClassLabel = 
-								myTest.instance(i).toString(myTest.classIndex());
-
-
-						// Get the prediction probability distribution.
-						double[] predictionDistribution = 
-								classifier.distributionForInstance(myTest.instance(i)); 
-
-						// Get the probability.
-						double predictionProbability = 
-								predictionDistribution[1];
-
-						fileWriter.append(idList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(type);
-						fileWriter.append(";");
-						fileWriter.append(sizeList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(myClassificator);
-						fileWriter.append(";");
-						fileWriter.append(String.format("%6.3f",predictionProbability).replace(',', '.'));
-						fileWriter.append(";");
-						fileWriter.append(trueClassLabel);
-						fileWriter.append("\n");
-
-
-					}
-
-					fileWriter.close();
+					
 
 				}
 				else if (n==3) {
 					//SVM---------------
-					SMO classifier = new SMO(); //scelgo come classificatore SVM
+					 classifier = new SMO(); //scelgo come classificatore SVM
 					myClassificator ="SVM";
 					classifier.buildClassifier(training); //qui si fa il training
 
 
 					//ora si scrive l'header del file csv coi risultati
-					FileWriter fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-					fileWriter.append("ID;Type;Size;ML_Model;Predicted;Actual");
-					fileWriter.append("\n");
-
-
-					// Loop over each test instance.
-					for (int i = 0; i < numtesting; i++)
-					{
-						// Get the true class label from the instance's own classIndex.
-						String trueClassLabel = 
-								myTest.instance(i).toString(myTest.classIndex());
-
-
-						// Get the prediction probability distribution.
-						double[] predictionDistribution = 
-								classifier.distributionForInstance(myTest.instance(i)); 
-
-						// Get the probability.
-						double predictionProbability = 
-								predictionDistribution[1];
-
-						fileWriter.append(idList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(type);
-						fileWriter.append(";");
-						fileWriter.append(sizeList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(myClassificator);
-						fileWriter.append(";");
-						fileWriter.append(String.format("%6.3f",predictionProbability).replace(',', '.'));
-						fileWriter.append(";");
-						fileWriter.append(trueClassLabel);
-						fileWriter.append("\n");
-
-
-					}
-
-					fileWriter.close();
+					 fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
 				}
 
-				else  {
+				else if (n==4) {
 					//J48---------------
-					J48 classifier = new J48(); //scelgo come classificatore random forest
+					 classifier = new J48(); //scelgo come classificatore random forest
 					myClassificator ="J48";
 					classifier.buildClassifier(training); //qui si fa il training
 
 
 					//ora si scrive l'header del file csv coi risultati
-					FileWriter fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
-					fileWriter.append("ID;Type;Size;ML_Model;Predicted;Actual");
+				}
+				
+				else if (n==5) {
+					//Decision Stump---------------
+					 classifier = new DecisionStump(); 
+					myClassificator ="DS";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==6) {
+					//Decision Table---------------
+					 classifier = new DecisionStump(); 
+					myClassificator ="DT";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				
+				else if (n==7) {
+					//Hyper Pipes---------------
+					 classifier = new HyperPipes(); 
+					myClassificator ="HP";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				
+				else if (n==8) {
+					//IB1---------------
+					 classifier = new IB1(); 
+					myClassificator ="IB1";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==9) {
+					//IBk---------------
+					 classifier = new IBk(); 
+					myClassificator ="IBk";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==10) {
+					//J48.PART---------------
+					 classifier = new PART(); 
+					myClassificator ="PART";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==11) {
+					//LOGIT BOOST---------------
+					 classifier = new LogitBoost(); 
+					myClassificator ="LB";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==12) {
+					//KSTAR---------------
+					 classifier = new KStar(); 
+					myClassificator ="KS";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==13) {
+					//LOGISTIC---------------
+					 classifier = new Logistic(); 
+					myClassificator ="LOG";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==14) {
+					//NAIVE BAYES SIMPLE---------------
+					 classifier = new NaiveBayesSimple(); 
+					myClassificator ="NBS";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==15) {
+					//NAIVE BAYES ---------------
+					 classifier = new NaiveBayes(); 
+					myClassificator ="NB";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				
+				else if (n==16) {
+					//Neural Network ---------------
+					 classifier = new MultilayerPerceptron(); 
+					myClassificator ="NN";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				
+				else if (n==17) {
+					//OneR ---------------
+					 classifier = new OneR(); 
+					myClassificator ="O";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==18) {
+					//VotedPerceptron ---------------
+					 classifier = new VotedPerceptron(); 
+					myClassificator ="VP";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				else if (n==19) {
+					//ADTree ---------------
+					 classifier = new ADTree(); 
+					myClassificator ="AT";
+					classifier.buildClassifier(training); //qui si fa il training
+
+
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+
+				}
+				
+				
+				//---------------------------------------//
+				fileWriter.append("ID;Size;Predicted;Actual");
+				fileWriter.append("\n");
+
+
+				// Loop over each test instance.
+				for (int i = 0; i < numtesting; i++)
+				{
+					// Get the true class label from the instance's own classIndex.
+					String trueClassLabel = 
+							myTest.instance(i).toString(myTest.classIndex());
+
+					// Get the prediction probability distribution.
+					double[] predictionDistribution = 
+							classifier.distributionForInstance(myTest.instance(i)); 
+
+					// Get the probability.
+					double predictionProbability = 
+							predictionDistribution[1]; //1==prob YES
+
+					fileWriter.append(idList.get(i));
+					fileWriter.append(";");
+					fileWriter.append(sizeList.get(i));
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",predictionProbability).replace(',', '.'));
+					fileWriter.append(";");
+					fileWriter.append(trueClassLabel);
 					fileWriter.append("\n");
 
 
-					// Loop over each test instance.
-					for (int i = 0; i < numtesting; i++)
-					{
-						// Get the true class label from the instance's own classIndex.
-						String trueClassLabel = 
-								myTest.instance(i).toString(myTest.classIndex());
-
-
-						// Get the prediction probability distribution.
-						double[] predictionDistribution = 
-								classifier.distributionForInstance(myTest.instance(i)); 
-
-						// Get the probability.
-						double predictionProbability = 
-								predictionDistribution[1];
-
-						fileWriter.append(idList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(type);
-						fileWriter.append(";");
-						fileWriter.append(sizeList.get(i));
-						fileWriter.append(";");
-						fileWriter.append(myClassificator);
-						fileWriter.append(";");
-						fileWriter.append(String.format("%6.3f",predictionProbability).replace(',', '.'));
-						fileWriter.append(";");
-						fileWriter.append(trueClassLabel);
-						fileWriter.append("\n");
-
-
-					}
-
-					fileWriter.close();
-
 				}
 
+				fileWriter.close();
 
 			}
 
