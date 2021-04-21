@@ -248,7 +248,8 @@ public class Weka {
 			FileWriter fileWriter = null;
 			int numOfClassifiers = 19;
 			//per ogni classificatore
-			for(int n=1;n<numOfClassifiers+1;n++) {
+			//for(int n=1;n<numOfClassifiers+1;n++) {
+			for(int n=1;n<5;n++) {
 				if(n==1) {
 
 
@@ -300,7 +301,7 @@ public class Weka {
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
-				}
+				}/*
 				
 				else if (n==5) {
 					//Decision Stump---------------
@@ -470,7 +471,7 @@ public class Weka {
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
-				}
+				}*/
 				
 				
 				//---------------------------------------//

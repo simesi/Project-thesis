@@ -69,8 +69,8 @@ public class Main {
 	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
 	private static final boolean doResearchQuest1 =false;
-	private static final boolean doResearchQuest2=true;
-	private static final boolean doResearchQuest3=false;
+	private static final boolean doResearchQuest2=false;
+	private static final boolean doResearchQuest3=true;
 
 	//cancella questa variabile
 	static int counterMethods=0;////
@@ -160,7 +160,9 @@ public class Main {
 	//--------------------------
 	//RQ3
 	private static final String dirRQ2= "Results RQ2";
-	
+	private static final String dirRQ3 = "Results RQ3";
+	private static ArrayList<Double> listOfBugProb;
+
 	//--------------------------
 
 
@@ -2311,10 +2313,6 @@ public class Main {
 				//per ogni versione nella primà metà delle release
 				for(int i=1;i<=Integer.min(Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5);i++) {
 
-					//for(int i=1;i<=1;i++) { //COMMENTA QUESTA RIGA
-
-
-
 					gitCheckoutAtGivenVersion(i);
 
 
@@ -2487,55 +2485,54 @@ public class Main {
 		}
 
 		if (doResearchQuest3) {
-
+          
 			final File folder = new File(dirRQ2);
 			filesPath = new ArrayList<>();
 			//populate filesPath array with the paths of the files from RQ2
 			listFiles(folder);
 
-			idList= new ArrayList<>();
+			listOfBugProb= new ArrayList<>();
 			sizeList= new ArrayList<>();
 
-			String folderRes = "Results RQ3";	        
-			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
+
+			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+dirRQ3);
 
 			Files.createDirectories(path);
-
+			String project;
 
 
 			for (String file : filesPath) {
 				if (file.contains("Method")) {
 
-					//prendi classificatore
-					int beginIndex= file.lastIndexOf("_");
-					String classif = file.substring(beginIndex+1, file.length()-4);
-					String fileRenamed=file.replace("Method", "Commit");
-					
-					//cerca file commit di quel classificatore
-					for (String fileIterator : filesPath) {
-						
-						if (fileIterator.equals(fileRenamed)) {
-							System.out.println("1");
-						}
-					}
-					//leggi file_Metodo_classificatore
-					
-					//per ogni metodo nel file fai query git per ottenre touching commit
-					
-					//popola listra con touching commit
-					
-					//cerca nel file_commit_classificatore i commit nella lista e ottieni prob.
-					
-					idList.clear();
-					sizeList.clear();
+					String[] tokens= file.split("_");
+					project=tokens[0];
+
+					//legge file_Metodo_classificatore e ne cerca i commit
+					doResearchQuest3ForMethod(file,project);
+
 				}
 			}
+			
+			for (String file : filesPath) {
+				if (file.contains("Class")) {
+
+					String[] tokens= file.split("_");
+					project=tokens[0];
+
+					//legge file_Metodo_classificatore e ne cerca i commit
+					doResearchQuest3ForClass(file,project);
+
+				}
+			}
+			
 
 		}
 
 
 
 	}
+
+
 
 	private static void calculateClassMetrics(int version) {
 
@@ -2785,7 +2782,7 @@ public class Main {
 
 	}
 
-	//questo metodo lancia un comando che ritornerà tutti i commit hash dei copmmit avvenuti nella release passata
+	//questo metodo lancia un comando che ritornerà tutti i commit hash dei commit avvenuti nella release passata
 	public static void SearchForCommitsOfGivenRelease(int release) {
 
 		//directory da cui far partire il comando git    
@@ -3119,6 +3116,7 @@ public class Main {
 
 			//System.out.println(fileEntry.getName()); //OPENJPA_Commit.csv
 			//System.out.println(fileEntry.getAbsolutePath()); //E:\Programmi\Eclipse\collectDataForRQ1\Results\OPENJPA_Commit.csv
+
 			filesPath.add(fileEntry.getName());
 		}
 	}
@@ -3152,7 +3150,6 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
-
 
 						writePieceOfCsv(fileWriterTrain,entry,"class");
 					} 
@@ -3194,7 +3191,6 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
-
 
 						writePieceOfCsv(fileWriterTrain,entry,"method");
 					} 
@@ -3320,8 +3316,240 @@ public class Main {
 			//System.out.println("Release "+i+" si chiama: "+releaseNames.get(releases.get(i-1))+" "+fromReleaseIndexToDate.get(i.toString()));
 
 		}
-
-
 	}
 
+	//this method get every method in the method's file obtained by RQ2 and search for the bug probability of touching commits
+	private static void doResearchQuest3ForMethod(String file, String project) {
+
+		String row;
+		String methodAndVersion;
+		String pathClass;
+		String method;
+		String version;
+
+		try {
+			String commitFile=file.replace("Method", "Commit");
+
+			//prendi classificatore
+			int beginIndex= commitFile.lastIndexOf("_");
+			String classif = commitFile.substring(beginIndex+1, file.length()-4);
+
+
+			/////////
+			FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Derived.csv");
+
+			fileWriter.append("ID;Size;HighestC;SumC;StandardProbability;Actual");
+			fileWriter.append("\n");
+
+
+
+			//open method file
+			BufferedReader csvMethodReader = new BufferedReader(new FileReader(dirRQ2+SLASH+file));
+
+			//discard the header
+			csvMethodReader.readLine();
+
+			//for each method
+			while ((row = csvMethodReader.readLine()) != null) {
+
+				//lettura file commit di quel classificatore
+				BufferedReader csvCommitReader = new BufferedReader(new FileReader(dirRQ2+SLASH+commitFile));
+
+				String[] entry = row.split(";");
+				methodAndVersion=entry[0];
+				int index= methodAndVersion.lastIndexOf("-");
+
+				pathClass= methodAndVersion.substring(0,methodAndVersion.indexOf("#"));
+				method=methodAndVersion.substring(methodAndVersion.indexOf("#"), index);
+				version= methodAndVersion.substring(index+1);
+
+				//System.out.println(pathClass+" "+method+" "+version);
+				//output:
+				//org/apache/bookkeeper/benchmark/TestClient.java #public_TestClient(String) 3
+
+				//this method return max,sum of given method
+				double[] results=getTouchingCommitOfMethodAtGivenMethodAndProb(csvCommitReader,pathClass,method,version,project);
+
+				fileWriter.append(entry[0].trim());
+				fileWriter.append(";");
+				fileWriter.append(entry[1]); //size
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
+				fileWriter.append(";");
+				fileWriter.append(entry[2]);
+				fileWriter.append(";");
+				fileWriter.append(entry[3]);
+				fileWriter.append("\n");
+
+
+			}
+			csvMethodReader.close();
+			fileWriter.close();		
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+	}
+
+	//this method search on cleaned Daniel's file in order to get the touching commit of a given method on a given release
+	private static double[] getTouchingCommitOfMethodAtGivenMethodAndProb(BufferedReader commitReader,
+			String searchedClass,String searchedMethod, String version, String project) {
+
+		String row,rowCommit;		
+		double max=0;
+
+		double sum=0;
+
+
+		try {
+			//open cleaned Daniel's file with map between Method and commit
+			BufferedReader csvReader = new BufferedReader(new FileReader(project.toLowerCase()+"_allcommits-output_clean.csv"));
+			
+			commitReader.mark(50000);
+			//discard the header
+			csvReader.readLine();
+			//per ogni riga del file di Daniel per le releases di test
+			while ((row = csvReader.readLine()) != null) {
+				String DanielColumns[]= row.split(";");
+				String DanielVers= DanielColumns[1].substring(DanielColumns[1].indexOf("-")+1);
+
+
+				if (DanielColumns[2].contains(searchedMethod)&&
+						DanielColumns[2].contains(searchedClass)&&DanielVers.equals(version)){
+
+
+
+					//discard header
+					commitReader.readLine();
+					//cerca nel file_commit_classificatore i commit e ottieni le prob.
+					while ((rowCommit = commitReader.readLine()) != null) {
+						String commitColumns[]= rowCommit.split(";");
+
+						if (commitColumns[0].trim().equals(DanielColumns[1].trim())){
+
+							//prendo la buggy probability del commit
+							listOfBugProb.add(Double.parseDouble(commitColumns[2]));
+							commitReader.reset();
+							break;
+						}
+					}
+				}
+			}
+
+			if (listOfBugProb.size()!=0){
+				Collections.sort(listOfBugProb);
+				max= listOfBugProb.get(listOfBugProb.size()-1);
+
+				/*if (listOfBugProb.size() % 2 == 0)
+				med = ((double)listOfBugProb.get(listOfBugProb.size()/2) + 
+						(double)listOfBugProb.get(
+								listOfBugProb.size()/2 - 1))/2;
+			else
+				med = (double) listOfBugProb.get(listOfBugProb.size()/2);
+				 */
+				sum=0;
+				for (double prob : listOfBugProb) {
+					sum=sum+prob; 
+				}
+			}
+			//av= sum/listOfBugProb.size();
+			listOfBugProb.clear();
+
+
+			csvReader.close();
+			commitReader.close();
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+
+		return new double[] {max,sum};
+	}
+
+	//this method get every method in the method's file obtained previously with HighestC and SumC, then 
+	// search for the bug probability of methods
+		private static void doResearchQuest3ForClass(String file, String project) {
+
+			String row;
+			String classMethodAndVersion;
+			String pathClass;
+			String method;
+			String version;
+
+			try {
+				String methodFile=file.replace("Class", "Method");
+
+				//prendi classificatore
+				int beginIndex= methodFile.lastIndexOf("_");
+				String classif = methodFile.substring(beginIndex+1, file.length()-4);
+
+
+				/////////
+				FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Derived.csv");
+
+				fileWriter.append("ID;Size;HighestC;SumC;HighestM,SumM;StandardProbability;Actual");
+				fileWriter.append("\n");
+
+
+
+				//open class file
+				BufferedReader csvClassReader = new BufferedReader(new FileReader(dirRQ2+SLASH+file));
+
+				//discard the header
+				csvClassReader.readLine();
+
+				//for each class
+				while ((row = csvClassReader.readLine()) != null) {
+
+					//lettura file con le buggy prob. dei metodi di quel classificatore
+					BufferedReader csvMethodReader = new BufferedReader(new FileReader(dirRQ2+SLASH+methodFile));
+
+					String[] entry = row.split(";");
+					classMethodAndVersion=entry[0];
+					int index= classMethodAndVersion.lastIndexOf("-");
+
+					pathClass= classMethodAndVersion.substring(0,classMethodAndVersion.indexOf("#"));
+					method=classMethodAndVersion.substring(classMethodAndVersion.indexOf("#"), index);
+					version= classMethodAndVersion.substring(index+1);
+
+					//System.out.println(pathClass+" "+method+" "+version);
+					//output:
+					//org/apache/bookkeeper/benchmark/TestClient.java #public_TestClient(String) 3
+
+					//this method return max and sum of bug prob. of given method
+					double[] results=getTouchingCommitOfMethodAtGivenMethodAndProb(csvMethodReader,pathClass,method,version,project);
+
+					fileWriter.append(entry[0].trim());
+					fileWriter.append(";");
+					fileWriter.append(entry[1]); //size
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
+					fileWriter.append(";");
+					fileWriter.append(entry[2]);
+					fileWriter.append(";");
+					fileWriter.append(entry[3]);
+					fileWriter.append("\n");
+
+
+				}
+				csvClassReader.close();
+				fileWriter.close();		
+
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);	
+			}
+		}
+	
+	
+	
 }
