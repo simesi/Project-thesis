@@ -234,19 +234,28 @@ public class Weka {
 
 
 			//-----------------
+			//
+			// count of instances with distinct buggy value
+			int[] countAttributes = new int[training.get(numAttr-1).numValues()];
+			for(Instance instance: training){
+			    countAttributes[(int)instance.value(numAttr-1)]++;
+			}
+			//System.out.println(countAttributes[0]);
+			//System.out.println(countAttributes[1]+" **");
+			
 			//SMOTE
-
 			SMOTE smote = new SMOTE();
 			smote.setInputFormat(training);
-
+			smote.setPercentage((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100);
+            smote.setClassValue("0");
 			training = Filter.useFilter(training, smote); //Apply SMOTE on Dataset
-
-
+      
+			//System.out.println((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100);
 			//-----------------			
 
 			Classifier classifier = null;
 			FileWriter fileWriter = null;
-			int numOfClassifiers = 19;
+			//int numOfClassifiers = 19;
 			//per ogni classificatore
 			//for(int n=1;n<numOfClassifiers+1;n++) {
 			for(int n=1;n<5;n++) {
