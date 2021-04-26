@@ -161,7 +161,6 @@ public class Main {
 	//RQ3
 	private static final String dirRQ2= "Results RQ2";
 	private static final String dirRQ3 = "Results RQ3";
-	private static ArrayList<Double> listOfBugProb;
 
 	//--------------------------
 
@@ -2491,10 +2490,6 @@ public class Main {
 			//populate filesPath array with the paths of the files from RQ2
 			listFiles(folder);
 
-			listOfBugProb= new ArrayList<>();
-			sizeList= new ArrayList<>();
-
-
 			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+dirRQ3);
 
 			Files.createDirectories(path);
@@ -3335,11 +3330,6 @@ public class Main {
 			String classif = commitFile.substring(beginIndex+1, file.length()-4);
 
 
-			/////////
-			//FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Derived.csv");
-
-			//fileWriter.append("ID;Size;HighestC;SumC;StandardProbability;Actual");
-			//fileWriter.append("\n");
 
 			FileWriter fileWriterMax = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Max.csv");
 			FileWriter fileWriterAverage = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Average.csv");
@@ -3373,15 +3363,11 @@ public class Main {
 				method=methodAndVersion.substring(methodAndVersion.indexOf("#"), index);
 				version= methodAndVersion.substring(index+1);
 
-				//System.out.println(pathClass+" "+method+" "+version);
-				//output:
-				//org/apache/bookkeeper/benchmark/TestClient.java #public_TestClient(String) 3
-
 				//this method return max,av and med of given method
 				double[] results=getTouchingCommitOfMethodAtGivenMethodAndProb(dirRQ2+SLASH+commitFile,csvCommitReader,pathClass,
 						method,version,project,entry[2]);
 
-			
+
 
 				fileWriterMax.append(entry[0].trim());
 				fileWriterMax.append(";");
@@ -3415,8 +3401,7 @@ public class Main {
 			csvmethodReader.close();
 			fileWriterMax.close();
 			fileWriterAverage.close();
-			fileWriterMedian.close();
-			//fileWriter.close();		
+			fileWriterMedian.close();	
 
 		}
 		catch (IOException e) {
@@ -3457,8 +3442,6 @@ public class Main {
 				if (DanielColumns[2].contains(searchedMethod)&&
 						DanielColumns[2].contains(searchedClass)&&DanielVers.equals(version)){
 
-
-
 					//discard header
 					commitReader.readLine();
 					//cerca nel file_commit_classificatore i commit e ottieni le prob.
@@ -3468,7 +3451,8 @@ public class Main {
 						if (commitColumns[0].trim().equals(DanielColumns[1].trim())){
 
 							//prendo la buggy probability del commit
-							listOfBugProb.add(Double.parseDouble(commitColumns[2]));
+							sum= sum+Double.parseDouble(commitColumns[2]);
+							max= Math.max(Double.parseDouble(commitColumns[2]), max);
 							commitReader.reset();
 							break;
 						}
@@ -3476,25 +3460,19 @@ public class Main {
 				}
 			}
 
-			listOfBugProb.add(Double.parseDouble(methodProb)); //adding standard probability
-			Collections.sort(listOfBugProb);
-			max= listOfBugProb.get(listOfBugProb.size()-1);
+			av= (double) ((max+sum+Double.parseDouble(methodProb))/(double)3);
 
-			if (listOfBugProb.size() % 2 == 0)
-				med = ((double)listOfBugProb.get(listOfBugProb.size()/2) + 
-						(double)listOfBugProb.get(
-								listOfBugProb.size()/2 - 1))/2;
-			else
-				med = (double) listOfBugProb.get(listOfBugProb.size()/2);
-
-			sum=0;
-			for (double prob : listOfBugProb) {
-				sum=sum+prob; 
+			if (sum>=Double.parseDouble(methodProb)) {
+				if(max>=Double.parseDouble(methodProb)) {
+					med=max;
+				}
+				else 
+					med=Double.parseDouble(methodProb);
 			}
-
-			av= sum/listOfBugProb.size();
-			listOfBugProb.clear();
-
+			else {
+				med=sum;
+			}
+			max=Math.max(Double.parseDouble(methodProb),sum); //looking standard bug probability of method
 
 			csvReader.close();
 			commitReader.close();
@@ -3510,59 +3488,118 @@ public class Main {
 
 
 	//this method search on method file in order to get the buggy probability given a class on a given release
-	private static double[] getTouchingCommitOfClassAtGivenMethodAndProb(
-			String searchedClass, String version, String project, String classif) {
+	private static double[] getDerivedClassBuggyProb(
+			String searchedClass, String version, String project, String classif,String classProb) {
 
-		String row;		
+		String row, rowCommit,rowMethod;		
 		double highestC=0.0;
 		double sumC=0.0;
 		double highestM=0.0;
 		double sumM=0.0;
+		double max=0.0;
+		double av=0.0;
+		double med=0.0;
+        ArrayList<Double> values;
 
 		try {
-			//open RQ2 method file with derived probabilities for method
-			BufferedReader csvMethodDerivedReader = new BufferedReader(new FileReader(dirRQ3+SLASH+project.toUpperCase()+"_method_"+classif+"_Derived.csv"));
+
+			//open RQ2 method file with standard probability for method
+			BufferedReader csvMethodStandardReader = new BufferedReader(new FileReader(dirRQ3+SLASH+project.toUpperCase()+"_method_"+classif+".csv"));
+
+			//open cleaned Daniel's file with map between Method and commit
+			BufferedReader csvReader = new BufferedReader(new FileReader(project.toLowerCase()+"_allcommits-output_clean.csv"));
+
+			//lettura file commit di quel classificatore
+			BufferedReader commitReader = new BufferedReader(new FileReader(dirRQ3+SLASH+project.toUpperCase()+"_Commit_"+classif+".csv"));
+
+			File f = new File(dirRQ3+SLASH+project.toUpperCase()+"_Commit_"+classif+".csv");
+			long fileSize = f.length();
+
+			commitReader.mark(Math.toIntExact(fileSize));
 
 			//discard the header
-			csvMethodDerivedReader.readLine();
-			//per ogni riga del file derived con i metodi delle releases di test
-			while ((row = csvMethodDerivedReader.readLine()) != null) {
-				String methodDerivedColumns[]= row.split(";");
-				String methodDerivedVers= methodDerivedColumns[0].substring(methodDerivedColumns[0].lastIndexOf("-")+1);
+			csvMethodStandardReader.readLine();
+
+			//for each row of method standard probability 
+			while ((rowMethod = csvMethodStandardReader.readLine()) != null) {
+				String methodStandardColumns[]= rowMethod.split(";");
+				String methodClassPath = methodStandardColumns[0].substring(0,methodStandardColumns[0].indexOf("#"));
+				String methodStandardVers= methodStandardColumns[0].substring(methodStandardColumns[0].lastIndexOf("-")+1);
+				String method=methodStandardColumns[0].substring(methodStandardColumns[0].indexOf("#"), methodStandardColumns[0].lastIndexOf("-"));
+
+				//searching for methods belonging on targeted class
+				if (methodClassPath.contains(searchedClass)&&methodStandardVers.equals(version)){
+
+					sumM= sumM+Double.parseDouble(methodStandardColumns[2]);
+					highestM=Math.max(highestM, Double.parseDouble(methodStandardColumns[2]));
 
 
-				if (methodDerivedColumns[0].contains(searchedClass)&&methodDerivedVers.equals(version)){
+					//searching for commit touching the founded method scanning Daniel's file
+					while ((row = csvReader.readLine()) != null) {
+						String DanielColumns[]= row.split(";");
 
-					highestC=Math.max(highestC, Double.parseDouble(methodDerivedColumns[2]));
-					sumC= sumC+Double.parseDouble(methodDerivedColumns[3]);
-					sumM= sumM +Double.parseDouble(methodDerivedColumns[4]);
-					highestM=Math.max(highestM, Double.parseDouble(methodDerivedColumns[4]));
+						//retrieving of version
+						String DanielVers= DanielColumns[1].substring(DanielColumns[1].indexOf("-")+1);
 
+						if (DanielColumns[2].contains(method)&&
+								DanielColumns[2].contains(searchedClass)&&DanielVers.equals(version)){
+
+							//discard header
+							commitReader.readLine();
+							//looking for commits in file_commit_classif and getting probabilities
+							while ((rowCommit = commitReader.readLine()) != null) {
+								String commitColumns[]= rowCommit.split(";");
+
+								if (commitColumns[0].trim().equals(DanielColumns[1].trim())){
+
+									//prendo la buggy probability del commit
+									sumC= sumC+Double.parseDouble(commitColumns[2]);
+									highestC= Math.max(Double.parseDouble(commitColumns[2]), highestC);
+									commitReader.reset();
+									break;
+								}
+							}
+						}
+					}
 				}
 			}
 
-			csvMethodDerivedReader.close();
+			av= (double) ((highestM+sumM+highestC+sumC+Double.parseDouble(classProb))/(double)5);
+			
+			values= new ArrayList<>();
+			values.add(sumM);
+			values.add(sumC);
+			values.add(highestC);
+			values.add(highestM);
+			values.add(Double.parseDouble(classProb));
+			
+			Collections.sort(values);
+			med= values.get(2);
+			max= values.get(4);
+			
+			csvMethodStandardReader.close();
+			csvReader.close();
+			commitReader.close();
 		}
 		catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);	
 		}
-
-		return new double[] {highestC,sumC,highestM,sumM};
+        
+		return new double[] {max,av,med};
 	}
 
 
 
 
 
-	//this method get every method in the method's file obtained previously with HighestC and SumC, then 
-	// search for the bug probability of methods
+	//this method get every method in the method's file previously obtained with HighestC and SumC, then 
+	// calculate the bug probability of class wich contains those methods
 	private static void doResearchQuest3ForClass(String file, String project) {
 
 		String row;
 		String classMethodAndVersion;
 		String pathClass;
-		String method;
 		String version;
 
 		try {
@@ -3571,12 +3608,16 @@ public class Main {
 			String classif = file.substring(beginIndex+1, file.length()-4);
 
 
-			/////////
-			FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Derived.csv");
+			FileWriter fileWriterMax = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Max.csv");
+			FileWriter fileWriterAverage = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Average.csv");
+			FileWriter fileWriterMedian = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Median.csv");
 
-			fileWriter.append("ID;Size;HighestC;SumC;HighestM;SumM;StandardProbability;Actual");
-			fileWriter.append("\n");
-
+			fileWriterMax.append("ID;Size;Predicted;Actual");
+			fileWriterMax.append("\n");
+			fileWriterAverage.append("ID;Size;Predicted;Actual");
+			fileWriterAverage.append("\n");
+			fileWriterMedian.append("ID;Size;Predicted;Actual");
+			fileWriterMedian.append("\n");		
 
 			//open class file
 			BufferedReader csvClassReader = new BufferedReader(new FileReader(dirRQ2+SLASH+file));
@@ -3591,35 +3632,47 @@ public class Main {
 				classMethodAndVersion=entry[0];
 				int index= classMethodAndVersion.lastIndexOf("-");
 
-				//pathClass= classMethodAndVersion.substring(0,classMethodAndVersion.indexOf("#"));
 				pathClass=classMethodAndVersion.substring(0, index); //discard of version
 
 				version= classMethodAndVersion.substring(index+1);
 
-				//this method return highestC,sumC,highestM,sumM of bug prob. of given class
-				double[] results=getTouchingCommitOfClassAtGivenMethodAndProb(pathClass,version,project,classif);
+				//this method return max,average and median of bug prob. of given class
+				double[] results=getDerivedClassBuggyProb(pathClass,
+						version,project,classif,entry[2]);
 
-				fileWriter.append(entry[0].trim());
-				fileWriter.append(";");
-				fileWriter.append(entry[1]); //size
-				fileWriter.append(";");
-				fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
-				fileWriter.append(";");
-				fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
-				fileWriter.append(";");
-				fileWriter.append(String.format("%6.3f",results[2]).replace(',', '.'));;
-				fileWriter.append(";");
-				fileWriter.append(String.format("%6.3f",results[3]).replace(',', '.'));;
-				fileWriter.append(";");
-				fileWriter.append(entry[2]); //standard
-				fileWriter.append(";");
-				fileWriter.append(entry[3]); //actual buggy
-				fileWriter.append("\n");
+				fileWriterMax.append(entry[0].trim());
+				fileWriterMax.append(";");
+				fileWriterMax.append(entry[1]); //size
+				fileWriterMax.append(";");
+				fileWriterMax.append(String.format("%6.3f",results[0]).replace(',', '.'));;
+				fileWriterMax.append(";");
+				fileWriterMax.append(entry[3]); // actual buggy
+				fileWriterMax.append("\n");
+
+				fileWriterAverage.append(entry[0].trim());
+				fileWriterAverage.append(";");
+				fileWriterAverage.append(entry[1]); //size
+				fileWriterAverage.append(";");
+				fileWriterAverage.append(String.format("%6.3f",results[1]).replace(',', '.'));
+				fileWriterAverage.append(";");
+				fileWriterAverage.append(entry[3]);
+				fileWriterAverage.append("\n");
+
+				fileWriterMedian.append(entry[0].trim());
+				fileWriterMedian.append(";");
+				fileWriterMedian.append(entry[1]); //size
+				fileWriterMedian.append(";");
+				fileWriterMedian.append(String.format("%6.3f",results[2]).replace(',', '.'));
+				fileWriterMedian.append(";");
+				fileWriterMedian.append(entry[3]);
+				fileWriterMedian.append("\n");
 
 
 			}
 			csvClassReader.close();
-			fileWriter.close();		
+			fileWriterMax.close();
+			fileWriterAverage.close();
+			fileWriterMedian.close();	
 
 		}
 		catch (IOException e) {
