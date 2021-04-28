@@ -2,6 +2,7 @@ package it.uniroma2.ing.inf.progetto;
 import weka.core.Instance;
 import weka.core.Instances;
 
+import java.awt.List;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -26,6 +27,7 @@ import weka.filters.supervised.instance.Resample;
 import weka.filters.supervised.instance.SMOTE;
 import weka.filters.supervised.instance.SpreadSubsample;
 import weka.filters.unsupervised.attribute.NumericTransform;
+import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.ReplaceMissingWithUserConstant;
 import weka.filters.unsupervised.attribute.SwapValues;
 import weka.core.converters.ArffSaver;
@@ -238,71 +240,67 @@ public class Weka {
 			// count of instances with distinct buggy value
 			int[] countAttributes = new int[training.get(numAttr-1).numValues()];
 			for(Instance instance: training){
-			    countAttributes[(int)instance.value(numAttr-1)]++;
+				countAttributes[(int)instance.value(numAttr-1)]++;
 			}
 			//System.out.println(countAttributes[0]);
 			//System.out.println(countAttributes[1]+" **");
-			
+
 			//SMOTE
 			SMOTE smote = new SMOTE();
 			smote.setInputFormat(training);
 			smote.setPercentage((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100);
-            smote.setClassValue("0");
+			smote.setClassValue("0");
 			training = Filter.useFilter(training, smote); //Apply SMOTE on Dataset
-      
+
 			//System.out.println((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100);
 			//-----------------			
 
 			Classifier classifier = null;
 			FileWriter fileWriter = null;
-			//int numOfClassifiers = 19;
+
+			int numOfClassifiers = 16;
 			//per ogni classificatore
-			//for(int n=1;n<numOfClassifiers+1;n++) {
-			for(int n=1;n<5;n++) {
+			for(int n=1;n<numOfClassifiers+1;n++) {
+
+				//for(int n=1;n<5;n++) {
 				if(n==1) {
-
-
-					//Bayes Network---------------
-					classifier = new BayesNet();
-					myClassificator ="BN";
+					//OneR ---------------
+					classifier = new OneR(); 
+					myClassificator ="O";
 					classifier.buildClassifier(training); //qui si fa il training
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
+				}
+
+				else if (n==2) {
+					//RandomForest---------------
+					classifier = new RandomForest(); //scelgo come classificatore RandomForest
+					myClassificator ="RF";
+					classifier.buildClassifier(training); //qui si fa il training
 
 
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
 
-				}
-				
-				else if (n==2) {
-					//RandomForest---------------
-					 classifier = new RandomForest(); //scelgo come classificatore RandomForest
-					myClassificator ="RF";
-					classifier.buildClassifier(training); //qui si fa il training
-
-
-					//ora si scrive l'header del file csv coi risultati
-					 fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-					
 
 				}
 				else if (n==3) {
 					//SVM---------------
-					 classifier = new SMO(); //scelgo come classificatore SVM
+					classifier = new SMO(); //scelgo come classificatore SVM
 					myClassificator ="SVM";
 					classifier.buildClassifier(training); //qui si fa il training
 
 
 					//ora si scrive l'header del file csv coi risultati
-					 fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
 				}
 
 				else if (n==4) {
 					//J48---------------
-					 classifier = new J48(); //scelgo come classificatore random forest
+					classifier = new J48(); //scelgo come classificatore random forest
 					myClassificator ="J48";
 					classifier.buildClassifier(training); //qui si fa il training
 
@@ -310,179 +308,108 @@ public class Weka {
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
-				}/*
-				
+				}
 				else if (n==5) {
 					//Decision Stump---------------
-					 classifier = new DecisionStump(); 
+					classifier = new DecisionStump(); 
 					myClassificator ="DS";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==6) {
 					//Decision Table---------------
-					 classifier = new DecisionStump(); 
+					classifier = new DecisionStump(); 
 					myClassificator ="DT";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
-				
+
 				else if (n==7) {
 					//Hyper Pipes---------------
-					 classifier = new HyperPipes(); 
+					classifier = new HyperPipes(); 
 					myClassificator ="HP";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
-				
+
 				else if (n==8) {
 					//IB1---------------
-					 classifier = new IB1(); 
+					classifier = new IB1(); 
 					myClassificator ="IB1";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==9) {
 					//IBk---------------
-					 classifier = new IBk(); 
+					classifier = new IBk(); 
 					myClassificator ="IBk";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==10) {
-					//J48.PART---------------
-					 classifier = new PART(); 
-					myClassificator ="PART";
+					//VotedPerceptron ---------------
+					classifier = new VotedPerceptron(); 
+					myClassificator ="VP";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==11) {
 					//LOGIT BOOST---------------
-					 classifier = new LogitBoost(); 
+					classifier = new LogitBoost(); 
 					myClassificator ="LB";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==12) {
 					//KSTAR---------------
-					 classifier = new KStar(); 
+					classifier = new KStar(); 
 					myClassificator ="KS";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==13) {
 					//LOGISTIC---------------
-					 classifier = new Logistic(); 
+					classifier = new Logistic(); 
 					myClassificator ="LOG";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==14) {
-					//NAIVE BAYES SIMPLE---------------
-					 classifier = new NaiveBayesSimple(); 
-					myClassificator ="NBS";
+					//ADTree ---------------
+					classifier = new ADTree(); 
+					myClassificator ="AT";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
 				else if (n==15) {
 					//NAIVE BAYES ---------------
-					 classifier = new NaiveBayes(); 
+					classifier = new NaiveBayes(); 
 					myClassificator ="NB";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
-				
+
 				else if (n==16) {
 					//Neural Network ---------------
-					 classifier = new MultilayerPerceptron(); 
+					classifier = new MultilayerPerceptron(); 
 					myClassificator ="NN";
 					classifier.buildClassifier(training); //qui si fa il training
-
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
 				}
-				
-				else if (n==17) {
-					//OneR ---------------
-					 classifier = new OneR(); 
-					myClassificator ="O";
-					classifier.buildClassifier(training); //qui si fa il training
 
 
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-				}
-				else if (n==18) {
-					//VotedPerceptron ---------------
-					 classifier = new VotedPerceptron(); 
-					myClassificator ="VP";
-					classifier.buildClassifier(training); //qui si fa il training
-
-
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-				}
-				else if (n==19) {
-					//ADTree ---------------
-					 classifier = new ADTree(); 
-					myClassificator ="AT";
-					classifier.buildClassifier(training); //qui si fa il training
-
-
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-				}*/
-				
-				
 				//---------------------------------------//
 				fileWriter.append("ID;Size;Predicted;Actual");
 				fileWriter.append("\n");
@@ -535,396 +462,107 @@ public class Weka {
 			e.printStackTrace();
 			System.exit(-1);
 		} 
-
-
-
 	}
 
-
-	public void doClassificationMilestone3(int maxversion, String projectName) {
-
-
-
-		this.projectName=projectName;
-
-		try 
-		{
-
-
-
-			for(int version=2;version<=maxversion;version++) {
-
-
-				DataSource source = new DataSource(projectName +version+ARFF);
-
-				DataSource source2 = new DataSource(projectName +version+ARFF);
-
-				this.noFilterTraining = source.getDataSet();
-				this.testing = source2.getDataSet();
-
-
-				//stima senza filtri
-				numAttrNoFilter = noFilterTraining.numAttributes();
-				noFilterTraining.setClassIndex(numAttrNoFilter - 1);
-				this.testing.setClassIndex(numAttrNoFilter - 1);
-
-
-				//senza e con feature selection
-				for (int fs=0;fs<=1;fs++) {
-
-					doOrNotFeatureSelection(fs,noFilterTraining,testing);
-
-
-					//senza balancing o con i tre tipi di balancing			
-					for(int balancing=1;balancing<=4;balancing++) {
-
-
-						//per ogni classificatore
-						for(int n=1;n<=3;n++) {
-
-
-							classifyAndWrite(n,balancing,fs,version);
-
-
-
-						}//per ogni classificatore
-
-					}//per ogni sampling
-				}//per ogni fs
-			}//per ogni versione
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			System.exit(-1); 
-		}
-
-
-
-	}
-
-
-	private void classifyAndWrite(int n,int balancing,int fs,int version) {
-
-
-		startClassificator(fs,balancing,n);
-
-		//--------------------------------------------------------------
-		//ora si scrive file csv coi risultati
-		String name = projectName+" Deliverable 2 Milestone 3.csv";
-		try (
-				//True = Append to file, false = Overwrite
-				FileWriter fileWriter = new FileWriter(name,true);
-				)
-		{
-			if(writeHeader==1) {
-				fileWriter.append("Dataset,#Training Release,%Training,%Defective in training,"
-						+ "%Defective in testing,classifier,balancing,Feature Selection,TP,FP,TN,FN,"
-						+ "Precision,Recall,ROC Area, Kappa");
-
-				fileWriter.append("\n");
-				writeHeader--;
-
-			}
-
-
-			fileWriter.append(projectName);
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(version-1));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((String.format("%.3f", (double) (noFilterTraining.size()/(double)(testing.size()+noFilterTraining.size()))))).replace(',', '.'));//modifica con sampling
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((String.format("%.3f",(double)numDefectiveTrain/(double)noFilterTraining.size()))).replace(',', '.'));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((String.format("%.3f",(double)numDefectiveTest/(double)testing.size()))).replace(',', '.'));
-			fileWriter.append(",");
-			fileWriter.append(myClassificator);
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(String.valueOf(balancing)));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(fs));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((int)eval.numTruePositives(1)));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((int)eval.numFalsePositives(1)));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((int)eval.numTrueNegatives(1)));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf((int)eval.numFalseNegatives(1)));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(numberFormat.format(eval.precision(1)).replace(',', '.')));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(numberFormat.format(eval.recall(1)).replace(',', '.')));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(numberFormat.format(eval.areaUnderROC(1)).replace(',', '.')));
-			fileWriter.append(",");
-			fileWriter.append(String.valueOf(numberFormat.format(eval.kappa()).replace(',', '.')));
-			fileWriter.append("\n");
-		}
-		catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1); 
-		}
-
-
-	}
-
-
-	private void startClassificator(int fs,int balancing,int n) {
-		/*
-
-
-
-		if(n==1) {
-			//NaiveBayes---------------
-			NaiveBayes classifier = new NaiveBayes(); //scelgo come classificatore il naive bayes
-			myClassificator ="NaiveBayes";
-			classify(classifier, fs, balancing);
-		}
-
-		else if (n==2) {
-			//RandomForest---------------
-			RandomForest classifier = new RandomForest(); //scelgo come classificatore RandomForest
-			myClassificator ="RandomForest";
-			classify(classifier, fs, balancing);
-		}
-
-		else {
-			//Ibk---------------
-			myClassificator ="IBk";
-			IBk classifier = new IBk(); //scelgo come classificatore Ibk
-
-			classify(classifier, fs, balancing );
-		}
-
-
-
-		 */
-
-
-	}
-
-
-	private void classify(Classifier classifier,int fs,int balancing) {
-
+	public ArrayList<String> doFeatureSelectionForMethod(String filePath) {
+		ArrayList<String> features = null;
 		try {
-
-			if(fs==0) {
-				classifier.buildClassifier(noFilterTraining); //qui si fa il training non filtrato
-				//no resample
-				if(balancing==1) {										
-					eval =new Evaluation(testing);	
-					eval.evaluateModel(classifier, testing);
-				}
-				//Oversampling
-				else if(balancing==2) {
-
-					this.resample = new Resample();
-					resample.setInputFormat(noFilterTraining);
-					resample.setNoReplacement(false);
-					FilteredClassifier fc = new FilteredClassifier();
-					fc.setClassifier(classifier);
-					String[] opts = new String[]{ "-B", "1.0", "-Z", ""+percentInstOfMajorityClass+""};
-					resample.setOptions(opts);
-					fc.setFilter(resample);
-					fc.buildClassifier(noFilterTraining);
-					eval = new Evaluation(testing);	
-					eval.evaluateModel(fc, testing); //sampled
-				}
-
-				//undersampling
-				else if(balancing==3) {
-
-					FilteredClassifier fc = new FilteredClassifier();
-					resample = new Resample();
-
-					setUndersampling(fc,resample,classifier,fs);					               
-				}
-
-				else if(balancing==4) {
-
-					resample = new Resample();
-					resample.setInputFormat(noFilterTraining);
-					FilteredClassifier fc = new FilteredClassifier();
-					SMOTE smote = new SMOTE();
-					smote.setInputFormat(noFilterTraining);
-					fc.setFilter(smote);
-					fc.buildClassifier(noFilterTraining);
-					eval =new Evaluation(testing);	
-					eval.evaluateModel(fc, testing);	
-
-				}
+			CSVLoader loader = new CSVLoader();
+			loader.setSource(new File(filePath));
+			loader.setFieldSeparator(";");
+			Instances data = loader.getDataSet();
 
 
-			}
-			else if(fs==1) {
-				classifier.buildClassifier(filteredTraining); //qui si fa il training filtrato
+			//remove of ID and Size feature
+			Remove removeFilter = new Remove();
+			int[] indices = {0, 1};
+			removeFilter.setAttributeIndicesArray(indices);
+			removeFilter.setInputFormat(data);
+			data = Filter.useFilter(data, removeFilter);
 
-				if(balancing==1) {
-					eval =new Evaluation(testing);
-					eval.evaluateModel(classifier, testingFiltered);
+			data.setClassIndex(data.numAttributes() - 1); //leviamo 1 perchè l'ultima colonna la vogliamo stimare 
 
-				}
-
-				//Oversampling
-				else if(balancing==2) {
-
-					resample = new Resample();
-					resample.setInputFormat(filteredTraining);
-					resample.setNoReplacement(false);
-					FilteredClassifier fc = new FilteredClassifier();
-					fc.setClassifier(classifier);
-					String[] opts = new String[]{ "-B", "1.0", "-Z", ""+percentInstOfMajorityClass+""};
-					resample.setOptions(opts);
-					fc.setFilter(resample);
-					fc.buildClassifier(filteredTraining);
-					eval = new Evaluation(testing);	
-					eval.evaluateModel(fc, testingFiltered); //sampled
-				}
-				//undersampling
-				else if(balancing==3) {
-
-					resample = new Resample();
-					FilteredClassifier fc = new FilteredClassifier();
-					setUndersampling(fc,resample,classifier,fs);			               
-				}
-
-				else if(balancing==4) {
-
-					resample = new Resample();
-					resample.setInputFormat(noFilterTraining);
-					FilteredClassifier fc = new FilteredClassifier();
-					SMOTE smote = new SMOTE();
-					smote.setInputFormat(noFilterTraining);
-					fc.setFilter(smote);
-					fc.buildClassifier(filteredTraining);
-					eval =new Evaluation(testing);	
-					eval.evaluateModel(fc, testingFiltered);	
-
-				}								
-
-
-
-			}//fine fs
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-
-	private void setUndersampling(FilteredClassifier fc, Resample resample,Classifier classifier,int fs) {
-
-		try {
-			if(fs==0) {
-				resample.setInputFormat(noFilterTraining);
-				fc.setClassifier(classifier);
-				SpreadSubsample  spreadSubsample = new SpreadSubsample();
-				String[] opts = new String[]{ "-M", "1.0"};
-				spreadSubsample.setOptions(opts);
-				fc.setFilter(spreadSubsample);
-				fc.buildClassifier(noFilterTraining);
-				eval =new Evaluation(testing);	
-				eval.evaluateModel(fc, testing);
-
-			}
-			else {
-				resample.setInputFormat(noFilterTraining);
-
-				fc.setClassifier(classifier);
-				SpreadSubsample  spreadSubsample = new SpreadSubsample();
-				String[] opts = new String[]{ "-M", "1.0"};
-				spreadSubsample.setOptions(opts);
-				fc.setFilter(spreadSubsample);
-				fc.buildClassifier(filteredTraining);
-				eval =new Evaluation(testing);	
-				eval.evaluateModel(fc, testingFiltered);	
-			}
-
-		}catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-
-	private void doOrNotFeatureSelection(int fs, Instances train, Instances testing)  {
-		//fs=1 allora con feature selection
-		if(fs==1) {
-
+			//Feature Selection 
 			//create AttributeSelection object
 			AttributeSelection filter = new AttributeSelection();
 			//create evaluator and search algorithm objects
 			CfsSubsetEval subEval = new CfsSubsetEval();
 			GreedyStepwise search = new GreedyStepwise();
-			//set the algorithm to search backward
-			search.setSearchBackwards(true);
 			//set the filter to use the evaluator and search algorithm
 			filter.setEvaluator(subEval);
 			filter.setSearch(search);
 
+			//specify the dataset
+			filter.setInputFormat(data);
 
-			try {
+			//qui si crea il training filtrato
+			data = Filter.useFilter(data, filter);
 
-				//specify the dataset
-				filter.setInputFormat(train);
-
-				//qui si crea il training filtrato
-				this.filteredTraining = Filter.useFilter(train, filter);
-
-				//stima numero attributi con i filtri
-				int numAttrFiltered = filteredTraining.numAttributes();
-
-				//evaluation with filtered
-				filteredTraining.setClassIndex(numAttrFiltered - 1);
-
-
-				testingFiltered = Filter.useFilter(testing, filter);
-
-
-				testingFiltered.setClassIndex(numAttrFiltered - 1);
-
-
-				//qui si contano le istanze positive...
-				this.percentInstOfMajorityClass=calculateDefectiveInInstances(filteredTraining,testingFiltered,numAttrFiltered);
-
-
-			} catch (Exception e) {
-				e.printStackTrace();
+			features = new ArrayList<>();
+			//get feature names
+			for (int i=0; i<data.numAttributes()-1;i++) {
+				features.add(data.attribute(i).name());
+				//System.out.println(data.attribute(i).name());
 			}
 
 
+		} catch (Exception e) {
 
-		}//fine if
-
-
-		if(fs==0) {
-
-			//qui si contano le istanze positive...
-			this.percentInstOfMajorityClass= calculateDefectiveInInstances(train,testing,numAttrNoFilter);
-
+			e.printStackTrace();
+			System.exit(-1);
 		}
-
-
+		return features;
 
 	}
 
+	public ArrayList<String> doFeatureSelectionForClass(String filePath) {
+		ArrayList<String> features = null;
+		try {
+			CSVLoader loader = new CSVLoader();
+			loader.setSource(new File(filePath));
+			loader.setFieldSeparator(";");
+			Instances data = loader.getDataSet();
 
-	private int calculateDefectiveInInstances(Instances train, Instances test, int numAttrFiltered) {
-		this.numDefectiveTrain=0;
-		this.numDefectiveTest=0;
 
-		//ora si contano il numero di buggy nelle Instances
-		for(Instance instance: train){
-			if(instance.stringValue(numAttrFiltered-1).equals("YES")) {
-				this.numDefectiveTrain++;
+			//remove of ID and Size feature
+			Remove removeFilter = new Remove();
+			int[] indices = {0, 1};
+			removeFilter.setAttributeIndicesArray(indices);
+			removeFilter.setInputFormat(data);
+			data = Filter.useFilter(data, removeFilter);
+
+			data.setClassIndex(data.numAttributes() - 1); //leviamo 1 perchè l'ultima colonna la vogliamo stimare 
+
+			//Feature Selection 
+			//create AttributeSelection object
+			AttributeSelection filter = new AttributeSelection();
+			//create evaluator and search algorithm objects
+			CfsSubsetEval subEval = new CfsSubsetEval();
+			GreedyStepwise search = new GreedyStepwise();
+			//set the filter to use the evaluator and search algorithm
+			filter.setEvaluator(subEval);
+			filter.setSearch(search);
+
+			//specify the dataset
+			filter.setInputFormat(data);
+
+			//qui si crea il training filtrato
+			data = Filter.useFilter(data, filter);
+
+			features = new ArrayList<>();
+			//get feature names
+			for (int i=0; i<data.numAttributes()-1;i++) {
+				features.add(data.attribute(i).name());
+				//System.out.println(data.attribute(i).name());
 			}
-		}
-		for(Instance instance: test){
-			if(instance.stringValue(numAttrFiltered-1).equals("YES")) {
-				this.numDefectiveTest++;
-			}
-		}
 
-		return 2*Math.max(this.numDefectiveTrain/train.size(),1-this.numDefectiveTrain/train.size())*100;
 
+		} catch (Exception e) {
+
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return features;
 
 	}
 

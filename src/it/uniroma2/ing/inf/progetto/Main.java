@@ -69,8 +69,7 @@ public class Main {
 	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
 
 	private static final boolean doResearchQuest1 =false;
-	private static final boolean doResearchQuest2=false;
-	private static final boolean doResearchQuest3=true;
+	private static final boolean doResearchQuest2=true;
 
 	//cancella questa variabile
 	static int counterMethods=0;////
@@ -150,6 +149,11 @@ public class Main {
 
 	//-------------------------------
 	//RQ2
+	private static final boolean doingPrediction = false;
+	private static final boolean doingMethodAndClassCombined= false;
+	private static final boolean doingDerivedProb = true;
+	private static final boolean doingFeatureSelection = false;
+
 	private static final String dirRQ1= "Results RQ1";
 	private static List<String> filesPath;
 	private static String csvTrain;
@@ -157,9 +161,9 @@ public class Main {
 	private static ArrayList<String> idList;
 	private static ArrayList<String> sizeList;
 
-	//--------------------------
-	//RQ3
 	private static final String dirRQ2= "Results RQ2";
+	private static ArrayList<Double> listOfBugProb;
+
 	private static final String dirRQ3 = "Results RQ3";
 
 	//--------------------------
@@ -2453,77 +2457,172 @@ public class Main {
 
 		//----------------------------------------------------------------------------
 		if (doResearchQuest2) {
+			if (doingPrediction) {
 
-			final File folder = new File(dirRQ1);
-			filesPath = new ArrayList<>();
-			//populate filesPath array with the paths of the metric files obtained for RQ1
-			listFiles(folder);
+				final File folder = new File(dirRQ1);
+				filesPath = new ArrayList<>();
+				//populate filesPath array with the paths of the metric files obtained for RQ1
+				listFiles(folder);
 
-			idList= new ArrayList<>();
-			sizeList= new ArrayList<>();
+				idList= new ArrayList<>();
+				sizeList= new ArrayList<>();
 
-			String folderRes = "Results RQ2";	        
-			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
+				String folderRes = "Results RQ2";	        
+				Path path = Paths.get(new File("").getAbsolutePath()+SLASH+folderRes);
 
-			Files.createDirectories(path);
+				Files.createDirectories(path);
 
 
 
-			for (String file : filesPath) {
-				findNumberOfReleasesOfFile(file);
-				createTrainAndTestFile(file);
+				for (String file : filesPath) {
+					findNumberOfReleasesOfFile(file);
+					createTrainAndTestFile(file);
 
-				Weka w = new Weka();
-				int beginIndex= file.indexOf("_");
+					Weka w = new Weka();
+					int beginIndex= file.indexOf("_");
 
-				w.doPrediction(file.substring(((beginIndex)+1),file.length()-4),file.substring(0, beginIndex),idList,sizeList);
-				idList.clear();
-				sizeList.clear();
+					w.doPrediction(file.substring(((beginIndex)+1),file.length()-4),file.substring(0, beginIndex),idList,sizeList);
+					idList.clear();
+					sizeList.clear();
+				}
+
 			}
 
-		}
-
-		if (doResearchQuest3) {
-
-			final File folder = new File(dirRQ2);
-			filesPath = new ArrayList<>();
-			//populate filesPath array with the paths of the files from RQ2
-			listFiles(folder);
-
-			Path path = Paths.get(new File("").getAbsolutePath()+SLASH+dirRQ3);
-
-			Files.createDirectories(path);
-			String project;
+			if(doingMethodAndClassCombined) {
 
 
-			for (String file : filesPath) {
-				if (file.contains("Method")) {
+				final File folder = new File(dirRQ2);
+				filesPath = new ArrayList<>();
+				//populate filesPath array with the paths of the files from RQ2
+				listFiles(folder);
 
-					String[] tokens= file.split("_");
-					project=tokens[0];
+				Path path = Paths.get(new File("").getAbsolutePath()+SLASH+dirRQ3);
 
-					//legge file_Metodo_classificatore e ne cerca i commit
-					doResearchQuest3ForMethod(file,project);
+				Files.createDirectories(path);
+				String project;
 
+
+				for (String file : filesPath) {
+					if (file.contains("Method")) {
+
+						String[] tokens= file.split("_");
+						project=tokens[0];
+
+						//legge file_Metodo_classificatore e ne cerca i commit
+						doResearchQuest2ForMethod(file,project);
+
+					}
+				}
+
+				for (String file : filesPath) {
+					if (file.contains("Class")) {
+
+						String[] tokens= file.split("_");
+						project=tokens[0];
+
+						//legge file_Metodo_classificatore e ne cerca i commit
+						doResearchQuest2ForClass(file,project);
+
+					}
+				}
+
+
+			}
+			if(doingDerivedProb) {
+
+				final File folder = new File(dirRQ2);
+				filesPath = new ArrayList<>();
+				//populate filesPath array with the paths of the files from RQ2
+				listFiles(folder);
+
+				listOfBugProb= new ArrayList<>();
+				sizeList= new ArrayList<>();
+
+
+				Path path = Paths.get(new File("").getAbsolutePath()+SLASH+dirRQ3);
+
+				Files.createDirectories(path);
+				String project;
+
+
+				for (String file : filesPath) {
+					if (file.contains("Method")) {
+
+						String[] tokens= file.split("_");
+						project=tokens[0];
+
+						//legge file_Metodo_classificatore e ne cerca i commit
+						doResearchQuestForDerivedProbMethod(file,project);
+
+					}
+				}
+
+				for (String file : filesPath) {
+					if (file.contains("Class")) {
+
+						String[] tokens= file.split("_");
+						project=tokens[0];
+
+						//legge file_Metodo_classificatore e ne cerca i commit
+						doResearchQuest2ForDerivedClass(file,project);
+
+					}
 				}
 			}
+			if (doingFeatureSelection) {
+				final File folder = new File(dirRQ2);
+				filesPath = new ArrayList<>();
+				//populate filesPath array with the paths of the files from standard RQ2
+				listFiles(folder);
 
-			for (String file : filesPath) {
-				if (file.contains("Class")) {
 
-					String[] tokens= file.split("_");
-					project=tokens[0];
+				Path path = Paths.get(new File("").getAbsolutePath()+SLASH+dirRQ3);
 
-					//legge file_Metodo_classificatore e ne cerca i commit
-					doResearchQuest3ForClass(file,project);
+				Files.createDirectories(path);
+				String project;
+				int count=0;
+				FileWriter fileWriter = null;
+				for (String file : filesPath) {
+					if (file.contains("method")&&file.contains("Derived")) {
 
+						if (count==0) {
+							fileWriter = new FileWriter(dirRQ3+SLASH+"Feature_Selection_Method.csv");
+
+							fileWriter.append("Project;Model;HighestC;SumC;StandardProbability");
+							fileWriter.append("\n");
+							count++;
+						}
+						String[] tokens= file.split("_");
+						project=tokens[0];
+
+						//si fa feature selection
+						doResearchQuest2ForMethodFeatureSelection(dirRQ2+SLASH+file,project,fileWriter);
+
+					}
 				}
+
+
+				for (String file : filesPath) {
+					if (file.contains("class")&&file.contains("Derived")) {
+
+						if (count==0) {
+							fileWriter = new FileWriter(dirRQ3+SLASH+"Feature_Selection_Class.csv");
+
+							fileWriter.append("Project;Model;HighestC;SumC;HighestM;SumM;StandardProbability");
+							fileWriter.append("\n");
+							count++;
+						}
+						String[] tokens= file.split("_");
+						project=tokens[0];
+
+						//si fa feature selection
+						doResearchQuest2ForClassFeatureSelection(dirRQ2+SLASH+file,project,fileWriter);
+
+					}
+				}
+				fileWriter.close();
 			}
-
-
 		}
-
-
 
 	}
 
@@ -3314,7 +3413,7 @@ public class Main {
 	}
 
 	//this method get every method in the file with Standard Probabilities and search for the derived bug probability of touching commits
-	private static void doResearchQuest3ForMethod(String file, String project) {
+	private static void doResearchQuest2ForMethod(String file, String project) {
 
 		String row;
 		String methodAndVersion;
@@ -3499,12 +3598,12 @@ public class Main {
 		double max=0.0;
 		double av=0.0;
 		double med=0.0;
-        ArrayList<Double> values;
+		ArrayList<Double> values;
 
 		try {
 
 			//open RQ2 method file with standard probability for method
-			BufferedReader csvMethodStandardReader = new BufferedReader(new FileReader(dirRQ3+SLASH+project.toUpperCase()+"_method_"+classif+".csv"));
+			BufferedReader csvMethodStandardReader = new BufferedReader(new FileReader(dirRQ3+SLASH+project.toUpperCase()+"_Method_"+classif+".csv"));
 
 			//open cleaned Daniel's file with map between Method and commit
 			BufferedReader csvReader = new BufferedReader(new FileReader(project.toLowerCase()+"_allcommits-output_clean.csv"));
@@ -3565,18 +3664,18 @@ public class Main {
 			}
 
 			av= (double) ((highestM+sumM+highestC+sumC+Double.parseDouble(classProb))/(double)5);
-			
+
 			values= new ArrayList<>();
 			values.add(sumM);
 			values.add(sumC);
 			values.add(highestC);
 			values.add(highestM);
 			values.add(Double.parseDouble(classProb));
-			
+
 			Collections.sort(values);
 			med= values.get(2);
 			max= values.get(4);
-			
+
 			csvMethodStandardReader.close();
 			csvReader.close();
 			commitReader.close();
@@ -3585,7 +3684,7 @@ public class Main {
 			e.printStackTrace();
 			System.exit(-1);	
 		}
-        
+
 		return new double[] {max,av,med};
 	}
 
@@ -3595,7 +3694,7 @@ public class Main {
 
 	//this method get every method in the method's file previously obtained with HighestC and SumC, then 
 	// calculate the bug probability of class wich contains those methods
-	private static void doResearchQuest3ForClass(String file, String project) {
+	private static void doResearchQuest2ForClass(String file, String project) {
 
 		String row;
 		String classMethodAndVersion;
@@ -3682,5 +3781,354 @@ public class Main {
 	}
 
 
+	private static void doResearchQuest2ForMethodFeatureSelection(String file, String project,FileWriter writer) {
 
+		try {
+
+			String[] parts= file.split("_");
+			String classif = parts[2];
+			Weka w = new Weka();
+			ArrayList<String> results=w.doFeatureSelectionForMethod(file);
+
+			writer.append(project);
+			writer.append(";");
+			writer.append(classif);
+			writer.append(";");
+			if (results.contains("HighestC"))
+				writer.append("Yes"); // highestC
+			else writer.append("No");
+			writer.append(";");
+
+			if (results.contains("SumC"))
+				writer.append("Yes"); // sumC
+			else writer.append("No");
+			writer.append(";"); 
+
+			if (results.contains("StandardProbability"))
+				writer.append("Yes"); // std
+			else writer.append("No");
+			writer.append("\n");
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+	}
+
+	private static void doResearchQuest2ForClassFeatureSelection(String file, String project,FileWriter writer) {
+
+		try {
+
+			String[] parts= file.split("_");
+			String classif = parts[2];
+			Weka w = new Weka();
+			ArrayList<String> results=w.doFeatureSelectionForClass(file);
+
+			writer.append(project);
+			writer.append(";");
+			writer.append(classif);
+			writer.append(";");
+			if (results.contains("HighestC"))
+				writer.append("Yes"); // highestC
+			else writer.append("No");
+			writer.append(";");
+
+			if (results.contains("SumC"))
+				writer.append("Yes"); // sumC
+			else writer.append("No");
+			writer.append(";"); 
+
+			if (results.contains("HighestM"))
+				writer.append("Yes"); // highestM
+			else writer.append("No");
+			writer.append(";");
+
+			if (results.contains("SumM"))
+				writer.append("Yes"); // sumM
+			else writer.append("No");
+			writer.append(";"); 
+
+			if (results.contains("StandardProbability"))
+				writer.append("Yes"); // std
+			else writer.append("No");
+			writer.append("\n");
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+	}
+
+	//this method get every method in the method's file obtained before with Std probability and search for the bug probability of touching commits
+	private static void doResearchQuestForDerivedProbMethod(String file, String project) {
+
+		String row;
+		String methodAndVersion;
+		String pathClass;
+		String method;
+		String version;
+
+		try {
+			String commitFile=file.replace("Method", "Commit");
+
+			//prendi classificatore
+			int beginIndex= commitFile.lastIndexOf("_");
+			String classif = commitFile.substring(beginIndex+1, file.length()-4);
+
+
+			/////////
+			FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Derived.csv");
+
+			fileWriter.append("ID;Size;HighestC;SumC;StandardProbability;Actual");
+			fileWriter.append("\n");
+
+
+
+			//open method file
+			BufferedReader csvMethodReader = new BufferedReader(new FileReader(dirRQ2+SLASH+file));
+
+			//discard the header
+			csvMethodReader.readLine();
+
+			//for each method
+			while ((row = csvMethodReader.readLine()) != null) {
+
+				//lettura file commit di quel classificatore
+				BufferedReader csvCommitReader = new BufferedReader(new FileReader(dirRQ2+SLASH+commitFile));
+
+				String[] entry = row.split(";");
+				methodAndVersion=entry[0];
+				int index= methodAndVersion.lastIndexOf("-");
+
+				pathClass= methodAndVersion.substring(0,methodAndVersion.indexOf("#"));
+				method=methodAndVersion.substring(methodAndVersion.indexOf("#"), index);
+				version= methodAndVersion.substring(index+1);
+
+				//System.out.println(pathClass+" "+method+" "+version);
+				//output:
+				//org/apache/bookkeeper/benchmark/TestClient.java #public_TestClient(String) 3
+
+				//this method return max,sum of given method
+				double[] results=getDerivedProbMethod(csvCommitReader,pathClass,method,version,project,classif);
+
+				fileWriter.append(entry[0].trim());
+				fileWriter.append(";");
+				fileWriter.append(entry[1]); //size
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
+				fileWriter.append(";");
+				fileWriter.append(entry[2]);
+				fileWriter.append(";");
+				fileWriter.append(entry[3]);
+				fileWriter.append("\n");
+
+
+			}
+			csvMethodReader.close();
+			fileWriter.close();		
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+	}
+
+	//this method search on cleaned Daniel's file in order to get the touching commit of a given method on a given release
+	private static double[] getDerivedProbMethod(BufferedReader commitReader,
+			String searchedClass,String searchedMethod, String version, String project, String classif) {
+
+		String row,rowCommit;		
+		double max=0;
+
+		double sum=0;
+
+
+		try {
+			//open cleaned Daniel's file with map between Method and commit
+			BufferedReader csvReader = new BufferedReader(new FileReader(project.toLowerCase()+"_allcommits-output_clean.csv"));
+
+			File f = new File(dirRQ3+SLASH+project.toUpperCase()+"_Commit_"+classif+".csv");
+			
+			long fileSize = f.length();
+
+			commitReader.mark(Math.toIntExact(fileSize));
+
+			//discard the header
+			csvReader.readLine();
+			//per ogni riga del file di Daniel per le releases di test
+			while ((row = csvReader.readLine()) != null) {
+				String DanielColumns[]= row.split(";");
+				String DanielVers= DanielColumns[1].substring(DanielColumns[1].indexOf("-")+1);
+
+
+				if (DanielColumns[2].contains(searchedMethod)&&
+						DanielColumns[2].contains(searchedClass)&&DanielVers.equals(version)){
+
+
+
+					//discard header
+					commitReader.readLine();
+					//cerca nel file_commit_classificatore i commit e ottieni le prob.
+					while ((rowCommit = commitReader.readLine()) != null) {
+						String commitColumns[]= rowCommit.split(";");
+
+						if (commitColumns[0].trim().equals(DanielColumns[1].trim())){
+
+							//prendo la buggy probability del commit
+							listOfBugProb.add(Double.parseDouble(commitColumns[2]));
+							commitReader.reset();
+							break;
+						}
+					}
+				}
+			}
+
+			if (listOfBugProb.size()!=0){
+				Collections.sort(listOfBugProb);
+				max= listOfBugProb.get(listOfBugProb.size()-1);
+
+				sum=0;
+				for (double prob : listOfBugProb) {
+					sum=sum+prob; 
+				}
+			}
+			//av= sum/listOfBugProb.size();
+			listOfBugProb.clear();
+
+
+			csvReader.close();
+			commitReader.close();
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+
+		return new double[] {max,sum};
+	}
+
+	//this method get every method in the method's file obtained previously with HighestC and SumC, then 
+	// search for the bug probability of methods
+	private static void doResearchQuest2ForDerivedClass(String file, String project) {
+
+
+		String row;
+		String classMethodAndVersion;
+		String pathClass;
+		String version;
+
+		try {
+			//prendi classificatore
+			int beginIndex= file.lastIndexOf("_");
+			String classif = file.substring(beginIndex+1, file.length()-4);
+
+
+			/////////
+			FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Derived.csv");
+
+			fileWriter.append("ID;Size;HighestC;SumC;HighestM;SumM;StandardProbability;Actual");
+			fileWriter.append("\n");
+
+
+			//open class file
+			BufferedReader csvClassReader = new BufferedReader(new FileReader(dirRQ2+SLASH+file));
+
+			//discard the header
+			csvClassReader.readLine();
+
+			//for each class
+			while ((row = csvClassReader.readLine()) != null) {
+
+				String[] entry = row.split(";");
+				classMethodAndVersion=entry[0];
+				int index= classMethodAndVersion.lastIndexOf("-");
+
+				//pathClass= classMethodAndVersion.substring(0,classMethodAndVersion.indexOf("#"));
+				pathClass=classMethodAndVersion.substring(0, index); //discard of version
+				
+				version= classMethodAndVersion.substring(index+1);
+
+				//this method return highestC,sumC,highestM,sumM of bug prob. of given class
+				double[] results=getDerivedClass(pathClass,version,project,classif);
+
+				fileWriter.append(entry[0].trim());
+					fileWriter.append(";");
+					fileWriter.append(entry[1]); //size
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[2]).replace(',', '.'));;
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[3]).replace(',', '.'));;
+					fileWriter.append(";");
+					fileWriter.append(entry[2]); //standard
+					fileWriter.append(";");
+					fileWriter.append(entry[3]); //actual buggy
+					fileWriter.append("\n");
+
+
+			}
+			csvClassReader.close();
+			fileWriter.close();		
+
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+	
+	}
+
+	private static double[] getDerivedClass(String searchedClass, 
+	String version, String project, String classif) {
+		
+		String row;		
+		double highestC=0.0;
+		double sumC=0.0;
+		double highestM=0.0;
+		double sumM=0.0;
+
+		try {
+			//open RQ2 method file with derived probabilities for method
+			BufferedReader csvMethodDerivedReader = new BufferedReader(new FileReader(dirRQ3+SLASH+project.toUpperCase()+"_method_"+classif+"_Derived.csv"));
+
+			//discard the header
+			csvMethodDerivedReader.readLine();
+			//per ogni riga del file derived con i metodi delle releases di test
+			while ((row = csvMethodDerivedReader.readLine()) != null) {
+				String methodDerivedColumns[]= row.split(";");
+				String methodDerivedVers= methodDerivedColumns[0].substring(methodDerivedColumns[0].indexOf("-")+1);
+
+
+				if (methodDerivedColumns[0].contains(searchedClass)&&methodDerivedVers.equals(version)){
+
+					highestC=Math.max(highestC, Double.parseDouble(methodDerivedColumns[2]));
+					sumC= sumC+Double.parseDouble(methodDerivedColumns[3]);
+					sumM= sumM +Double.parseDouble(methodDerivedColumns[4]);
+					highestM=Math.max(highestM, Double.parseDouble(methodDerivedColumns[4]));
+
+				}
+			}
+
+			csvMethodDerivedReader.close();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);	
+		}
+
+		return new double[] {highestC,sumC,highestM,sumM};
+		
+	}
+
+	
 }
+
