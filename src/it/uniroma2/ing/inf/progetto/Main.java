@@ -151,8 +151,8 @@ public class Main {
 	//RQ2
 	private static final boolean doingPrediction = false;
 	private static final boolean doingMethodAndClassCombined= false;
-	private static final boolean doingDerivedProb = true;
-	private static final boolean doingFeatureSelection = false;
+	private static final boolean doingDerivedProb = false;
+	private static final boolean doingFeatureSelection = true;
 
 	private static final String dirRQ1= "Results RQ1";
 	private static List<String> filesPath;
@@ -2572,7 +2572,7 @@ public class Main {
 			if (doingFeatureSelection) {
 				final File folder = new File(dirRQ2);
 				filesPath = new ArrayList<>();
-				//populate filesPath array with the paths of the files from standard RQ2
+				//populate filesPath array with the paths of the files from Derived RQ2
 				listFiles(folder);
 
 
@@ -2600,15 +2600,17 @@ public class Main {
 
 					}
 				}
-
-
+				if (count!=0)
+					fileWriter.close();
+				count=0;
 				for (String file : filesPath) {
 					if (file.contains("class")&&file.contains("Derived")) {
 
 						if (count==0) {
 							fileWriter = new FileWriter(dirRQ3+SLASH+"Feature_Selection_Class.csv");
 
-							fileWriter.append("Project;Model;HighestC;SumC;HighestM;SumM;StandardProbability");
+							//fileWriter.append("Project;Model;HighestC;SumC;HighestM;SumM;StandardProbability");
+							fileWriter.append("Project;Model;HighestC;SumC;StandardProbability");
 							fileWriter.append("\n");
 							count++;
 						}
@@ -3244,7 +3246,7 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
-
+						//if ((Integer.parseInt(entry[1]))<3) {
 						writePieceOfCsv(fileWriterTrain,entry,"class");
 					} 
 					else  {
@@ -3285,7 +3287,7 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
-
+						//if ((Integer.parseInt(entry[1]))<3) {
 						writePieceOfCsv(fileWriterTrain,entry,"method");
 					} 
 					else  {
@@ -3322,7 +3324,7 @@ public class Main {
 					//per creare il dataset di training
 					if ((Integer.parseInt(entry[1]))<Integer.min(
 							Integer.max(Math.floorDiv(fromReleaseIndexToDate.size(),10),3),5)) {
-
+						//if ((Integer.parseInt(entry[1]))<3) {
 						writePieceOfCsv(fileWriterTrain,entry,"commit");
 					} 
 					else  {
@@ -3430,14 +3432,14 @@ public class Main {
 
 
 
-			FileWriter fileWriterMax = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Max.csv");
-			FileWriter fileWriterAverage = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Average.csv");
+			//FileWriter fileWriterMax = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Max.csv");
+			//FileWriter fileWriterAverage = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Average.csv");
 			FileWriter fileWriterMedian = new FileWriter(dirRQ3+SLASH+project+"_method_"+classif+"_Median.csv");
 
-			fileWriterMax.append("ID;Size;Predicted;Actual");
+			/*fileWriterMax.append("ID;Size;Predicted;Actual");
 			fileWriterMax.append("\n");
 			fileWriterAverage.append("ID;Size;Predicted;Actual");
-			fileWriterAverage.append("\n");
+			fileWriterAverage.append("\n");*/
 			fileWriterMedian.append("ID;Size;Predicted;Actual");
 			fileWriterMedian.append("\n");			
 
@@ -3468,7 +3470,7 @@ public class Main {
 
 
 
-				fileWriterMax.append(entry[0].trim());
+				/*fileWriterMax.append(entry[0].trim());
 				fileWriterMax.append(";");
 				fileWriterMax.append(entry[1]); //size
 				fileWriterMax.append(";");
@@ -3484,7 +3486,7 @@ public class Main {
 				fileWriterAverage.append(String.format("%6.3f",results[1]).replace(',', '.'));
 				fileWriterAverage.append(";");
 				fileWriterAverage.append(entry[3]);
-				fileWriterAverage.append("\n");
+				fileWriterAverage.append("\n");*/
 
 				fileWriterMedian.append(entry[0].trim());
 				fileWriterMedian.append(";");
@@ -3498,8 +3500,8 @@ public class Main {
 
 			}
 			csvmethodReader.close();
-			fileWriterMax.close();
-			fileWriterAverage.close();
+			//fileWriterMax.close();
+			//fileWriterAverage.close();
 			fileWriterMedian.close();	
 
 		}
@@ -3629,8 +3631,8 @@ public class Main {
 				//searching for methods belonging on targeted class
 				if (methodClassPath.contains(searchedClass)&&methodStandardVers.equals(version)){
 
-					sumM= sumM+Double.parseDouble(methodStandardColumns[2]);
-					highestM=Math.max(highestM, Double.parseDouble(methodStandardColumns[2]));
+					//sumM= sumM+Double.parseDouble(methodStandardColumns[2]);
+					//highestM=Math.max(highestM, Double.parseDouble(methodStandardColumns[2]));
 
 
 					//searching for commit touching the founded method scanning Daniel's file
@@ -3664,17 +3666,17 @@ public class Main {
 			}
 
 			av= (double) ((highestM+sumM+highestC+sumC+Double.parseDouble(classProb))/(double)5);
-
+			
 			values= new ArrayList<>();
-			values.add(sumM);
+			//values.add(sumM);
 			values.add(sumC);
 			values.add(highestC);
-			values.add(highestM);
+			//values.add(highestM);
 			values.add(Double.parseDouble(classProb));
 
 			Collections.sort(values);
-			med= values.get(2);
-			max= values.get(4);
+			med= values.get(1);
+			max= values.get(2);
 
 			csvMethodStandardReader.close();
 			csvReader.close();
@@ -3707,14 +3709,14 @@ public class Main {
 			String classif = file.substring(beginIndex+1, file.length()-4);
 
 
-			FileWriter fileWriterMax = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Max.csv");
-			FileWriter fileWriterAverage = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Average.csv");
+			//FileWriter fileWriterMax = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Max.csv");
+			//FileWriter fileWriterAverage = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Average.csv");
 			FileWriter fileWriterMedian = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Median.csv");
 
-			fileWriterMax.append("ID;Size;Predicted;Actual");
+			/*fileWriterMax.append("ID;Size;Predicted;Actual");
 			fileWriterMax.append("\n");
 			fileWriterAverage.append("ID;Size;Predicted;Actual");
-			fileWriterAverage.append("\n");
+			fileWriterAverage.append("\n");*/
 			fileWriterMedian.append("ID;Size;Predicted;Actual");
 			fileWriterMedian.append("\n");		
 
@@ -3739,7 +3741,7 @@ public class Main {
 				double[] results=getDerivedClassBuggyProb(pathClass,
 						version,project,classif,entry[2]);
 
-				fileWriterMax.append(entry[0].trim());
+				/*fileWriterMax.append(entry[0].trim());
 				fileWriterMax.append(";");
 				fileWriterMax.append(entry[1]); //size
 				fileWriterMax.append(";");
@@ -3755,7 +3757,7 @@ public class Main {
 				fileWriterAverage.append(String.format("%6.3f",results[1]).replace(',', '.'));
 				fileWriterAverage.append(";");
 				fileWriterAverage.append(entry[3]);
-				fileWriterAverage.append("\n");
+				fileWriterAverage.append("\n");*/
 
 				fileWriterMedian.append(entry[0].trim());
 				fileWriterMedian.append(";");
@@ -3769,8 +3771,8 @@ public class Main {
 
 			}
 			csvClassReader.close();
-			fileWriterMax.close();
-			fileWriterAverage.close();
+			//fileWriterMax.close();
+			//fileWriterAverage.close();
 			fileWriterMedian.close();	
 
 		}
@@ -3839,7 +3841,7 @@ public class Main {
 			else writer.append("No");
 			writer.append(";"); 
 
-			if (results.contains("HighestM"))
+			/*if (results.contains("HighestM"))
 				writer.append("Yes"); // highestM
 			else writer.append("No");
 			writer.append(";");
@@ -3847,7 +3849,7 @@ public class Main {
 			if (results.contains("SumM"))
 				writer.append("Yes"); // sumM
 			else writer.append("No");
-			writer.append(";"); 
+			writer.append(";"); */
 
 			if (results.contains("StandardProbability"))
 				writer.append("Yes"); // std
@@ -3952,8 +3954,8 @@ public class Main {
 			//open cleaned Daniel's file with map between Method and commit
 			BufferedReader csvReader = new BufferedReader(new FileReader(project.toLowerCase()+"_allcommits-output_clean.csv"));
 
-			File f = new File(dirRQ3+SLASH+project.toUpperCase()+"_Commit_"+classif+".csv");
-			
+			File f = new File(dirRQ2+SLASH+project.toUpperCase()+"_Commit_"+classif+".csv");
+
 			long fileSize = f.length();
 
 			commitReader.mark(Math.toIntExact(fileSize));
@@ -4032,7 +4034,8 @@ public class Main {
 			/////////
 			FileWriter fileWriter = new FileWriter(dirRQ3+SLASH+project+"_class_"+classif+"_Derived.csv");
 
-			fileWriter.append("ID;Size;HighestC;SumC;HighestM;SumM;StandardProbability;Actual");
+			//fileWriter.append("ID;Size;HighestC;SumC;HighestM;SumM;StandardProbability;Actual");
+			fileWriter.append("ID;Size;HighestC;SumC;StandardProbability;Actual");
 			fileWriter.append("\n");
 
 
@@ -4051,28 +4054,28 @@ public class Main {
 
 				//pathClass= classMethodAndVersion.substring(0,classMethodAndVersion.indexOf("#"));
 				pathClass=classMethodAndVersion.substring(0, index); //discard of version
-				
+
 				version= classMethodAndVersion.substring(index+1);
 
 				//this method return highestC,sumC,highestM,sumM of bug prob. of given class
 				double[] results=getDerivedClass(pathClass,version,project,classif);
 
 				fileWriter.append(entry[0].trim());
-					fileWriter.append(";");
-					fileWriter.append(entry[1]); //size
-					fileWriter.append(";");
-					fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
-					fileWriter.append(";");
-					fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
-					fileWriter.append(";");
-					fileWriter.append(String.format("%6.3f",results[2]).replace(',', '.'));;
-					fileWriter.append(";");
-					fileWriter.append(String.format("%6.3f",results[3]).replace(',', '.'));;
-					fileWriter.append(";");
-					fileWriter.append(entry[2]); //standard
-					fileWriter.append(";");
-					fileWriter.append(entry[3]); //actual buggy
-					fileWriter.append("\n");
+				fileWriter.append(";");
+				fileWriter.append(entry[1]); //size
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));;
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));;
+				fileWriter.append(";");
+				/*fileWriter.append(String.format("%6.3f",results[2]).replace(',', '.'));;
+				fileWriter.append(";");
+				fileWriter.append(String.format("%6.3f",results[3]).replace(',', '.'));;
+				fileWriter.append(";");*/
+				fileWriter.append(entry[2]); //standard
+				fileWriter.append(";");
+				fileWriter.append(entry[3]); //actual buggy
+				fileWriter.append("\n");
 
 
 			}
@@ -4084,12 +4087,12 @@ public class Main {
 			e.printStackTrace();
 			System.exit(-1);	
 		}
-	
+
 	}
 
 	private static double[] getDerivedClass(String searchedClass, 
-	String version, String project, String classif) {
-		
+			String version, String project, String classif) {
+
 		String row;		
 		double highestC=0.0;
 		double sumC=0.0;
@@ -4126,9 +4129,9 @@ public class Main {
 		}
 
 		return new double[] {highestC,sumC,highestM,sumM};
-		
+
 	}
 
-	
+
 }
 

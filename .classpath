@@ -7,10 +7,11 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="E:/Programmi/WEKA/Weka-3-8-4/smote-1.0.3.jar/smote-1.0.3.jar"/>
-	<classpathentry kind="lib" path="E:/Programmi/WEKA/Weka-3-8-4/weka.jar"/>
 	<classpathentry kind="lib" path="E:/Programmi/Java/jdk1.8.0_141/lib/java-json.jar"/>
 	<classpathentry kind="lib" path="C:/Users/simone/Desktop/hyperPipes.jar"/>
 	<classpathentry kind="lib" path="C:/Users/simone/Desktop/simpleEducationalLearningSchemes.jar"/>
 	<classpathentry kind="lib" path="C:/Users/simone/Desktop/alternatingdecisiontrees-1.0.3.jar"/>
+	<classpathentry kind="lib" path="E:/Programmi/WEKA/Weka-3-8-4/weka.jar"/>
+	<classpathentry kind="lib" path="C:/Users/simone/Desktop/votingFeatureIntervals.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

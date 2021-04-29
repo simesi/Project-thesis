@@ -2,7 +2,6 @@ package it.uniroma2.ing.inf.progetto;
 import weka.core.Instance;
 import weka.core.Instances;
 
-import java.awt.List;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,18 +13,13 @@ import java.util.ArrayList;
 import weka.attributeSelection.CfsSubsetEval;
 import weka.attributeSelection.GreedyStepwise;
 import weka.classifiers.Classifier;
-import weka.classifiers.Evaluation;
-import weka.classifiers.meta.FilteredClassifier;
-import weka.classifiers.meta.LogitBoost;
 import weka.classifiers.misc.HyperPipes;
+import weka.classifiers.misc.VFI;
 import weka.classifiers.lazy.IB1;
 import weka.classifiers.lazy.IBk;
-import weka.classifiers.lazy.KStar;
 import weka.filters.Filter;
 import weka.filters.supervised.attribute.AttributeSelection;
-import weka.filters.supervised.instance.Resample;
 import weka.filters.supervised.instance.SMOTE;
-import weka.filters.supervised.instance.SpreadSubsample;
 import weka.filters.unsupervised.attribute.NumericTransform;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.attribute.ReplaceMissingWithUserConstant;
@@ -33,22 +27,11 @@ import weka.filters.unsupervised.attribute.SwapValues;
 import weka.core.converters.ArffSaver;
 import weka.core.converters.CSVLoader;
 import weka.core.converters.ConverterUtils.DataSource;
-import weka.estimators.KernelEstimator;
 import weka.classifiers.functions.Logistic;
-import weka.classifiers.functions.MultilayerPerceptron;
-//import weka.classifiers.functions.LibSVM;
-import weka.classifiers.functions.SMO;
 import weka.classifiers.functions.VotedPerceptron;
-import weka.classifiers.trees.ADTree;
-import weka.classifiers.trees.DecisionStump;
 import weka.classifiers.trees.J48;
-import weka.classifiers.rules.PART;
-import weka.classifiers.rules.ZeroR;
 import weka.classifiers.trees.RandomForest;
-import weka.classifiers.bayes.BayesNet;
 import weka.classifiers.bayes.NaiveBayes;
-import weka.classifiers.bayes.NaiveBayesSimple;
-import weka.classifiers.rules.OneR;
 
 
 public class Weka {
@@ -56,20 +39,13 @@ public class Weka {
 
 	private static final String ARFF=".arff";
 	private static final String dirRQ2= "Results RQ2";
-	private int numDefectiveTrain=0;
-	private int numDefectiveTest=0;
-	private Instances filteredTraining = null;
-	private Instances testingFiltered = null;
-	private int numAttrNoFilter=0;
+
 	int percentInstOfMajorityClass=0;
 	String projectName;
 	Instances noFilterTraining;
-	Instances testing;
-	Evaluation eval;
-	Resample resample;
+	Instances testing;	
 	DecimalFormat numberFormat = new DecimalFormat("0.00");
 	String myClassificator;
-	int writeHeader=1;
 
 
 
@@ -248,7 +224,12 @@ public class Weka {
 			//SMOTE
 			SMOTE smote = new SMOTE();
 			smote.setInputFormat(training);
-			smote.setPercentage((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100);
+			if ((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100>0.0) {
+				smote.setPercentage((double)((double)(countAttributes[0]-(countAttributes[1]))/(double)(countAttributes[1]))*100);
+			}
+			else {
+				smote.setPercentage((double)((double)(countAttributes[1]-(countAttributes[0]))/(double)(countAttributes[0]))*100);
+			}
 			smote.setClassValue("0");
 			training = Filter.useFilter(training, smote); //Apply SMOTE on Dataset
 
@@ -258,75 +239,34 @@ public class Weka {
 			Classifier classifier = null;
 			FileWriter fileWriter = null;
 
-			int numOfClassifiers = 16;
+			int numOfClassifiers = 9;
 			//per ogni classificatore
 			for(int n=1;n<numOfClassifiers+1;n++) {
 
 				//for(int n=1;n<5;n++) {
 				if(n==1) {
-					//OneR ---------------
-					classifier = new OneR(); 
-					myClassificator ="O";
+					//RandomForest---------------
+					classifier = new RandomForest(); //scelgo come classificatore RandomForest
+					myClassificator ="RF";
 					classifier.buildClassifier(training); //qui si fa il training
+
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
 				}
 
 				else if (n==2) {
-					//RandomForest---------------
-					classifier = new RandomForest(); //scelgo come classificatore RandomForest
-					myClassificator ="RF";
-					classifier.buildClassifier(training); //qui si fa il training
-
-
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-
-
-				}
-				else if (n==3) {
-					//SVM---------------
-					classifier = new SMO(); //scelgo come classificatore SVM
-					myClassificator ="SVM";
-					classifier.buildClassifier(training); //qui si fa il training
-
-
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-
-				}
-
-				else if (n==4) {
 					//J48---------------
 					classifier = new J48(); //scelgo come classificatore random forest
 					myClassificator ="J48";
 					classifier.buildClassifier(training); //qui si fa il training
 
-
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 
 				}
-				else if (n==5) {
-					//Decision Stump---------------
-					classifier = new DecisionStump(); 
-					myClassificator ="DS";
-					classifier.buildClassifier(training); //qui si fa il training
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-				}
-				else if (n==6) {
-					//Decision Table---------------
-					classifier = new DecisionStump(); 
-					myClassificator ="DT";
-					classifier.buildClassifier(training); //qui si fa il training
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-				}
+				else if (n==3) {
 
-				else if (n==7) {
 					//Hyper Pipes---------------
 					classifier = new HyperPipes(); 
 					myClassificator ="HP";
@@ -335,7 +275,7 @@ public class Weka {
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 				}
 
-				else if (n==8) {
+				else if (n==4) {
 					//IB1---------------
 					classifier = new IB1(); 
 					myClassificator ="IB1";
@@ -343,7 +283,7 @@ public class Weka {
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 				}
-				else if (n==9) {
+				else if (n==5) {
 					//IBk---------------
 					classifier = new IBk(); 
 					myClassificator ="IBk";
@@ -351,7 +291,7 @@ public class Weka {
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 				}
-				else if (n==10) {
+				else if (n==6) {
 					//VotedPerceptron ---------------
 					classifier = new VotedPerceptron(); 
 					myClassificator ="VP";
@@ -359,39 +299,8 @@ public class Weka {
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 				}
-				else if (n==11) {
-					//LOGIT BOOST---------------
-					classifier = new LogitBoost(); 
-					myClassificator ="LB";
-					classifier.buildClassifier(training); //qui si fa il training
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-				}
-				else if (n==12) {
-					//KSTAR---------------
-					classifier = new KStar(); 
-					myClassificator ="KS";
-					classifier.buildClassifier(training); //qui si fa il training
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-				}
-				else if (n==13) {
-					//LOGISTIC---------------
-					classifier = new Logistic(); 
-					myClassificator ="LOG";
-					classifier.buildClassifier(training); //qui si fa il training
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-				}
-				else if (n==14) {
-					//ADTree ---------------
-					classifier = new ADTree(); 
-					myClassificator ="AT";
-					classifier.buildClassifier(training); //qui si fa il training
-					//ora si scrive l'header del file csv coi risultati
-					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
-				}
-				else if (n==15) {
+
+				else if (n==7) {
 					//NAIVE BAYES ---------------
 					classifier = new NaiveBayes(); 
 					myClassificator ="NB";
@@ -400,14 +309,23 @@ public class Weka {
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 				}
 
-				else if (n==16) {
-					//Neural Network ---------------
-					classifier = new MultilayerPerceptron(); 
-					myClassificator ="NN";
+				else if (n==8) {
+					//LOGISTIC---------------
+					classifier = new Logistic(); 
+					myClassificator ="LOG";
 					classifier.buildClassifier(training); //qui si fa il training
 					//ora si scrive l'header del file csv coi risultati
 					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
 				}
+				if (n==9) {
+					//VFI---------------
+					classifier = new VFI(); 
+					myClassificator ="VFI";
+					classifier.buildClassifier(training); //qui si fa il training
+					//ora si scrive l'header del file csv coi risultati
+					fileWriter = new FileWriter(dirRQ2+"\\"+name+"_"+myClassificator+".csv");
+				}
+
 
 
 				//---------------------------------------//
@@ -500,7 +418,7 @@ public class Weka {
 
 			features = new ArrayList<>();
 			//get feature names
-			for (int i=0; i<data.numAttributes()-1;i++) {
+			for (int i=0; i<data.numAttributes();i++) {
 				features.add(data.attribute(i).name());
 				//System.out.println(data.attribute(i).name());
 			}
@@ -551,7 +469,7 @@ public class Weka {
 
 			features = new ArrayList<>();
 			//get feature names
-			for (int i=0; i<data.numAttributes()-1;i++) {
+			for (int i=0; i<data.numAttributes();i++) {
 				features.add(data.attribute(i).name());
 				//System.out.println(data.attribute(i).name());
 			}
