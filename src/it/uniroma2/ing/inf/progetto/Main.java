@@ -149,10 +149,10 @@ public class Main {
 
 	//-------------------------------
 	//RQ2
-	private static final boolean doingPrediction = false;
+	private static final boolean doingStandardPrediction = false;
 	private static final boolean doingMethodAndClassCombined= false;
 	private static final boolean doingDerivedProb = false;
-	private static final boolean doingFeatureSelection = true;
+	private static final boolean doingFeatureSelection = false;
 
 	private static final String dirRQ1= "Results RQ1";
 	private static List<String> filesPath;
@@ -2457,7 +2457,7 @@ public class Main {
 
 		//----------------------------------------------------------------------------
 		if (doResearchQuest2) {
-			if (doingPrediction) {
+			if (doingStandardPrediction) {
 
 				final File folder = new File(dirRQ1);
 				filesPath = new ArrayList<>();
@@ -3561,7 +3561,7 @@ public class Main {
 				}
 			}
 
-			av= (double) ((max+sum+Double.parseDouble(methodProb))/(double)3);
+			//av= (double) ((max+sum+Double.parseDouble(methodProb))/(double)3);
 
 			if (sum>=Double.parseDouble(methodProb)) {
 				if(max>=Double.parseDouble(methodProb)) {
@@ -3573,7 +3573,7 @@ public class Main {
 			else {
 				med=sum;
 			}
-			max=Math.max(Double.parseDouble(methodProb),sum); //looking standard bug probability of method
+			//max=Math.max(Double.parseDouble(methodProb),sum); //looking standard bug probability of method
 
 			csvReader.close();
 			commitReader.close();
