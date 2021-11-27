@@ -64,12 +64,12 @@ public class Main {
 
 	private static final String HARD_DRIVE_NAME="E:";
 
-	private static boolean studyMethodMetrics=true; //calcola le metriche di metodo
-	private static boolean studyClassMetrics=true; //calcola le metriche di classe
-	private static boolean studyCommitMetrics=true; //calcola le metriche di commit
+	private static boolean studyMethodMetrics=false; //calcola le metriche di metodo
+	private static boolean studyClassMetrics=false; //calcola le metriche di classe
+	private static boolean studyCommitMetrics=false; //calcola le metriche di commit
 
-	private static final boolean doResearchQuest1 =false;
-	private static final boolean doResearchQuest2=true;
+	private static final boolean doResearchQuest1 =true;
+	private static final boolean doResearchQuest2=false;
 
 	//cancella questa variabile
 	static int counterMethods=0;////
@@ -152,7 +152,7 @@ public class Main {
 	private static final boolean doingStandardPrediction = false;
 	private static final boolean doingMethodAndClassCombined= false;
 	private static final boolean doingDerivedProb = false;
-	private static final boolean doingfileWithProbToUnderstand=true;
+	private static final boolean doingfileWithProbToUnderstand=false;
 	private static final boolean doingFeatureSelection = false;
 
 	private static final String dirRQ1= "Results RQ1";
@@ -228,7 +228,6 @@ public class Main {
 			throw new SecurityException("can't run command in non-existing directory '" + directory + "'");
 
 		}
-
 		ProcessBuilder pb = new ProcessBuilder()
 
 				.command(command)
@@ -369,8 +368,6 @@ public class Main {
 			try (BufferedReader br = new BufferedReader(new InputStreamReader(is));) {
 
 				String line;
-
-
 
 				while ((line = br.readLine()) != null) {
 
@@ -1244,7 +1241,7 @@ public class Main {
 				}
 				//si prende solo l'ultimo commit dello stream (il più vecchio) e si fa il checkout
 				command = "git checkout "+myCommit;	
-				System.out.println("dir "+directory+" command: "+command);
+				//System.out.println("dir "+directory+" command: "+command);
 				runCommandOnShell(directory, command);
 
 			} catch (IOException e) {
@@ -2245,7 +2242,7 @@ public class Main {
 		//popolo un'HasMap con associazione indice di release-data delle release
 		for ( i = 1; i <= releases.size(); i++) {
 			fromReleaseIndexToDate.put(i.toString(),releases.get(i-1));
-			System.out.println("Release "+i+" si chiama: "+releaseNames.get(releases.get(i-1))+" "+fromReleaseIndexToDate.get(i.toString()));
+			//System.out.println("Release "+i+" si chiama: "+releaseNames.get(releases.get(i-1))+" "+fromReleaseIndexToDate.get(i.toString()));
 
 		}
 
@@ -2290,7 +2287,7 @@ public class Main {
 
 			findNumberOfReleases();
 
-			/*    queste righe alla fine vanno eseguite!
+			    //queste righe alla fine vanno eseguite!
 			try {
 				//si fa il clone della versione odierna del progetto
 				gitClone();	
@@ -2300,7 +2297,7 @@ public class Main {
 				Thread.currentThread().interrupt();
 				System.exit(-1);
 			}	
-			 */
+			 
 			//----------------------------------------------------------------------------
 
 			if(studyClassMetrics||studyCommitMetrics) {
@@ -2326,7 +2323,7 @@ public class Main {
 
 					//search for java files in the cloned repository
 					searchFileJava(folder, filepathsOfTheCurrentRelease);
-					System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
+					//System.out.println("Founded "+filepathsOfTheCurrentRelease.size()+" files");
 
 					calculateClassMetrics(i);
 					filepathsOfTheCurrentRelease.clear();
@@ -2373,7 +2370,7 @@ public class Main {
 					//search for java methods in the cloned repository         
 					File folder = new File(projectName+"_FinerGit_"+rel);
 					searchMethods(folder, fileMethodsOfTheCurrentRelease,rel);
-					System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
+					//System.out.println("Founded "+fileMethodsOfTheCurrentRelease.size()+" methods");
 
 					//////////////////////////////////////////////
 					//initialize of thread boolean parameters 
@@ -2407,7 +2404,7 @@ public class Main {
 					}
 					////////////////////////////////////////////////
 
-					System.out.println("Calculated metrics version "+rel);
+					//System.out.println("Calculated metrics version "+rel);
 					//writeMethodMetricsResult(rel);// COMMENTA QUESTA LINEA	!!!!
 					fileMethodsOfTheCurrentRelease.clear();
 				} 
@@ -2439,10 +2436,10 @@ public class Main {
 					SearchForCommitsOfGivenRelease(rel);
 					calculatingCommitInRelease=false;
 
-					System.out.println("Founded "+commitOfCurrentRelease.size()+" commits on release "+rel);
+					//System.out.println("Founded "+commitOfCurrentRelease.size()+" commits on release "+rel);
 
 					calculateCommitMetrics(rel);
-					System.out.println("Calculated metrics version "+rel);
+					//System.out.println("Calculated metrics version "+rel);
 
 					commitOfCurrentRelease.clear();
 				}
@@ -2453,7 +2450,7 @@ public class Main {
 			}
 
 			//cancellazione directory clonata locale del progetto   
-			recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
+			//recursiveDelete(new File(new File("").getAbsolutePath()+SLASH+projectName));
 		}
 
 		//----------------------------------------------------------------------------
@@ -2594,10 +2591,10 @@ public class Main {
 						project=tokens[0];
 
 						//crea un unico file csv conMedian, HighestC, SumC, stdProb
-						//doResearchQuestForDerivedAndCombinedProbMethod(file,project);
+						doResearchQuestForDerivedAndCombinedProbMethod(file,project);
 
 						//crea un file csv per ogni classf, progetto e operazione (highest/sum)
-						doResearchQuest2ForMethodPlus(file,project);
+						//doResearchQuest2ForMethodPlus(file,project);
 
 					}
 				}
@@ -2611,8 +2608,11 @@ public class Main {
 						String[] tokens= file.split("_");
 						project=tokens[0];
 
+						//crea un unico file csv conMedian, HighestC, SumC, stdProb
+						doResearchQuestForDerivedAndCombinedProbClass(file,project);
+						
 						//crea un file csv per ogni classf, progetto e operazione (highest/sum)
-						doResearchQuest2ForDerivedClassPlus(file,project);
+						//doResearchQuest2ForDerivedClassPlus(file,project);
 
 					}
 				}
@@ -2710,10 +2710,10 @@ public class Main {
 
 			counterMethods++;
 			if(Math.floorMod(counterMethods, 10)==0) {
-				System.out.println("Calcolato fino alla "+counterMethods+"° classe");
+				//System.out.println("Calcolato fino alla "+counterMethods+"° classe");
 			}
 		}
-		System.out.println("########## Evaluated metrics for version "+version+"############");
+		//System.out.println("########## Evaluated metrics for version "+version+"############");
 		counterMethods=0;
 
 	}
@@ -2752,7 +2752,7 @@ public class Main {
 
 			//commenta queste due righe per non avere printf
 			counterMethods++;
-			System.out.println("metodo: "+counterMethods+"°, versione "+version);
+			//System.out.println("metodo: "+counterMethods+"°, versione "+version);
 
 		}
 
@@ -2766,10 +2766,10 @@ public class Main {
 
 			counter++;
 			if(Math.floorMod(counter, 10)==0) {
-				System.out.println("Commit "+counter+" "+commit+" release "+version);
+				//System.out.println("Commit "+counter+" "+commit+" release "+version);
 			}
 			////////////////
-			System.out.println("Working on commit:"+commit);
+			//System.out.println("Working on commit:"+commit);
 
 			calculatingFirstHalfCommitMetrics = true;
 			//il metodo getFirstHalfCommitMetrics() creerà anche l'arrayList di entry LineOfCommitDataset
@@ -2793,7 +2793,7 @@ public class Main {
 			getExpCommitLevel(commit);
 			calculatingExp=false;
 
-			System.out.println("Founded "+modifiedFilesOfCommit.size()+" file changed");
+			//System.out.println("Founded "+modifiedFilesOfCommit.size()+" file changed");
 			//ora per le metriche AGE e REXP  -----------------
 			//per ogni file occorre calcolare la data dell'ultimo commit avvenuto
 			for (int i = 0; i < modifiedFilesOfCommit.size(); i++) {
@@ -4298,7 +4298,7 @@ public class Main {
 				/////////
 				fileWriter = new FileWriter(dirRQ3+SLASH+"Method_All.csv");
 
-				fileWriter.append("Project;Model;ID;Size;HighestC;SumC;StandardProbability;Median;Actual");
+				fileWriter.append("Project;Model;ID;Size;HighestC;SumC;Median;StandardProbability;Actual");
 				fileWriter.append("\n");
 			}
 			else
@@ -4362,6 +4362,85 @@ public class Main {
 		}
 	}
 
+	
+		private static void doResearchQuestForDerivedAndCombinedProbClass(String file, String project) {
+
+			String row;
+			String classMethodAndVersion;
+			String pathClass;
+			String method;
+			String version;
+
+			try {
+				//prendi classificatore
+				int beginIndex= file.lastIndexOf("_");
+				String classif = file.substring(beginIndex+1, file.length()-4);
+
+
+				File tmpfile = new File(dirRQ3+SLASH+"Class_All.csv");
+				FileWriter fileWriter;
+
+				if(!tmpfile.exists()) {
+					/////////
+					fileWriter = new FileWriter(dirRQ3+SLASH+"Class_All.csv");
+
+					fileWriter.append("Project;Model;ID;Size;HighestC;SumC;Median;StandardProbability;Actual");
+					fileWriter.append("\n");
+				}
+				else
+					fileWriter = new FileWriter(dirRQ3+SLASH+"Class_All.csv",true);
+
+				//open class file
+				BufferedReader csvClassReader = new BufferedReader(new FileReader(dirRQ2+SLASH+file));
+
+				//discard the header
+				csvClassReader.readLine();
+
+				//for each method
+				while ((row = csvClassReader.readLine()) != null) {
+					String[] entry = row.split(";");
+					classMethodAndVersion=entry[0];
+					int index= classMethodAndVersion.lastIndexOf("-");
+
+					//pathClass= classMethodAndVersion.substring(0,classMethodAndVersion.indexOf("#"));
+					pathClass=classMethodAndVersion.substring(0, index); //discard of version
+
+					version= classMethodAndVersion.substring(index+1);
+
+					//this method return highestC,sumC and median of bug prob. of given class
+					double[] results=getDerivedClassPlus(pathClass,version,project,classif,entry[2]);
+					
+										
+					fileWriter.append(project);
+					fileWriter.append(";");					
+					fileWriter.append(classif);
+					fileWriter.append(";");
+					fileWriter.append(entry[0].trim());
+					fileWriter.append(";");
+					fileWriter.append(entry[1]); //size
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[0]).replace(',', '.'));
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[1]).replace(',', '.'));
+					fileWriter.append(";");
+					fileWriter.append(String.format("%6.3f",results[2]).replace(',', '.')); //median
+					fileWriter.append(";");
+					fileWriter.append(entry[2]); // direct prob.
+					fileWriter.append(";");
+					fileWriter.append(entry[3]); //predicted
+					fileWriter.append("\n");
+
+				}
+				csvClassReader.close();
+				fileWriter.close();		
+
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);	
+			}
+		}
+		
 
 	//this method search on cleaned Daniel's file in order to get the touching commit of a given method on a given release
 	private static double[] getDerivedProbMethod(BufferedReader commitReader,
@@ -4770,8 +4849,7 @@ public class Main {
 		String row;		
 		double highestC=0.0;
 		double sumC=0.0;
-		double max=0.0;
-		double av=0.0;
+		double med=0.0;
 
 		try {
 			//open RQ2 method file with derived probabilities for method
@@ -4792,7 +4870,17 @@ public class Main {
 					
 				}
 			}
-
+			if (sumC>=Double.parseDouble(classProb)) {
+				if(highestC>=Double.parseDouble(classProb)) {
+					med=highestC;
+				}
+				else 
+					med=Double.parseDouble(classProb);
+			}
+			else {
+				med=sumC;
+			}
+			
 			csvMethodDerivedReader.close();
 		}
 		catch (IOException e) {
@@ -4800,11 +4888,8 @@ public class Main {
 			System.exit(-1);	
 		}
 		
-		av= (double) ((highestC+sumC+Double.parseDouble(classProb))/(double)3);
 		
-		max=Math.max(Double.parseDouble(classProb),sumC); //looking standard bug probability of method
-
-		return new double[] {highestC,sumC,av,max};
+		return new double[] {highestC,sumC,med};
 
 	}
 
